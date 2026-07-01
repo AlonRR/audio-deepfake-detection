@@ -10,6 +10,22 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.detection.evaluate import compute_eer, eer_from_scores  # noqa: E402
+from src.evaluation.speaker_sim import cosine  # noqa: E402
+
+
+def test_tdcf_perfect_cm_is_zero():
+    from src.detection.evaluate import compute_tdcf
+    bona = np.linspace(2.0, 3.0, 200)
+    spoof = np.linspace(-3.0, -2.0, 200)
+    v = compute_tdcf(bona, spoof, pfa_asv=0.05, pmiss_asv=0.01, pmiss_spoof_asv=0.01)
+    assert 0.0 <= v < 1e-6, v
+
+
+def test_cosine_identity_and_opposite():
+    v = np.array([1.0, 2.0, 3.0, 4.0])
+    assert abs(cosine(v, v) - 1.0) < 1e-9
+    assert abs(cosine(v, -v) + 1.0) < 1e-9
+    assert abs(cosine(np.array([1.0, 0.0]), np.array([0.0, 1.0]))) < 1e-9
 
 
 def test_perfect_separation_is_zero_eer():
