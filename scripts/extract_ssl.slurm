@@ -1,19 +1,19 @@
 #!/bin/bash
-#SBATCH --job-name=adf-ssl-extract
+#SBATCH --job-name=adf-ssl
+#SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=06:00:00
-#SBATCH --output=slurm-%j.out
-#
-# Cache frozen SSL features for all three ASVspoof subsets (PyTorch container).
-#   DATA=/datasets/ASVspoof2019/LA OUT=/models/$USER/ssl_xlsr sbatch scripts/extract_ssl.slurm
-set -euo pipefail
-CONTAINER="${CONTAINER:-/opt/containers/pytorch-25.04.sif}"
-DATA="${DATA:-/datasets/ASVspoof2019/LA}"
-OUT="${OUT:-/models/$USER/ssl_xlsr}"
-FRONTEND="${FRONTEND:-facebook/wav2vec2-xls-r-300m}"
-
-for SUBSET in train dev eval; do
-  echo ">> extracting $SUBSET"
-  apptainer exec --nv "$CONTAINER" python -m src.detection.features_ssl \
-      --data-root "$DATA" --subset "$SUBSET" --out "$OUT/$SUBSET" --frontend "$FRONTEND"
-done
+#SBATCH --time=02:00:00
+#SBATCH --output=%x-%j.out
+set -e
+cd "$HOME/adf"
+SUBSET=${SUBSET:-train}
+CT=/opt/containers/pytorch-25.04.sif
+apptainer exec --nv --env SUBSET="$SUBSET" "$CT" bash -c '
+set -e
+cd "$HOME/adf"
+source scripts/lab_env_pt.sh
+export HF_HOME="$HOME/.cache/huggingface"
+OUT="$HOME/adf/features/ssl_xlsr/$SUBSET"
+python3 -m src.detection.features_ssl --data-root "$HOME/data/LA" --subset "$SUBSET" --out "$OUT" --frontend facebook/wav2vec2-xls-r-300m --layer avg --max-frames 200
+'
+echo SSL-EXTRACT-DONE-$SUBSET
