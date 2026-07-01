@@ -61,25 +61,46 @@ def _fix_frames(feat: np.ndarray, max_frames: int) -> np.ndarray:
     return np.concatenate([feat, pad], axis=0)
 
 
+def _npy_path(out_dir: str, item) -> str:
+    """Stable per-utterance cache name (keyed on the flac id, so runs are resumable)."""
+    utt = os.path.splitext(os.path.basename(item.path))[0]
+    return os.path.join(out_dir, f"{utt}.npy")
+
+
 def cache_subset(data_root, subset, out_dir, frontend, layer, max_frames, limit=None) -> str:
-    """Extract + cache features for one ASVspoof subset; write a manifest.jsonl."""
+    """Extract + cache features for one ASVspoof subset; write a manifest.jsonl.
+
+    Resumable: utterances already cached (their .npy exists) are skipped, so a job
+    killed at the 2 h QOS cap can simply be resubmitted to continue. The manifest is
+    rebuilt from every item that has a cached array, so it is always complete/correct.
+    """
     os.makedirs(out_dir, exist_ok=True)
     items = D.parse_protocol(data_root, subset, limit)
-    ext = SSLExtractor(frontend, layer)
-    manifest = os.path.join(out_dir, "manifest.jsonl")
-    with open(manifest, "w", encoding="utf-8") as mf:
-        for k, it in enumerate(items):
+    todo = [it for it in items if not os.path.exists(_npy_path(out_dir, it))]
+    print(f"[ssl] {subset}: {len(items)} total, {len(items) - len(todo)} cached, {len(todo)} to do")
+
+    if todo:
+        ext = SSLExtractor(frontend, layer)
+        for k, it in enumerate(todo):
             try:
                 feat = _fix_frames(ext.extract(load_wav(it.path, TARGET_SR)), max_frames)
             except Exception as exc:
                 print(f"[ssl] skip {it.path}: {exc}")
                 continue
-            npy = os.path.join(out_dir, f"{k:06d}.npy")
-            np.save(npy, feat)
-            mf.write(json.dumps({"npy": npy, "label": it.label}) + "\n")
+            np.save(_npy_path(out_dir, it), feat)
             if k % 500 == 0:
-                print(f"[ssl] {subset} {k}/{len(items)}")
-    print(f"[ssl] wrote manifest -> {manifest}  (D={ext.hidden_size}, T={max_frames})")
+                print(f"[ssl] {subset} {k}/{len(todo)}", flush=True)
+        print(f"[ssl] extracted D={ext.hidden_size}, T={max_frames}")
+
+    manifest = os.path.join(out_dir, "manifest.jsonl")
+    n = 0
+    with open(manifest, "w", encoding="utf-8") as mf:
+        for it in items:
+            npy = _npy_path(out_dir, it)
+            if os.path.exists(npy):
+                mf.write(json.dumps({"npy": npy, "label": it.label}) + "\n")
+                n += 1
+    print(f"[ssl] wrote manifest -> {manifest}  ({n}/{len(items)} entries)")
     return manifest
 
 
