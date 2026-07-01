@@ -1,0 +1,6 @@
+# Shell scripts run on the Linux GPU server — keep LF so the shebang isn't `#!/bin/bash\r`.
+*.sh    text eol=lf
+*.slurm text eol=lf
+*.py    text eol=lf
+# The assignment brief is binary (don't let git touch line endings / diff it).
+*.odt   binary
