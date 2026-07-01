@@ -55,8 +55,49 @@ Artifacts land in `reports/run1/` (learning curves, DET curve, `dev_scores.npz`,
 `result.json`). Pull those back (download from JupyterHub, or `git add`/commit if using B)
 and we compare EER against the published ASVspoof baseline.
 
-## What's next after this baseline trains
-- Swap `--feat lfcc` ↔ `logmel`; sweep LR/filters/dropout (the "multiple tries" + learning
-  curves the rubric wants) — keep the runs that fail, we analyse them.
-- Then the SSL detector (frozen wav2vec2-XLS-R features in the **PyTorch** container →
-  Keras back-end) and the creation half (record your voice → XTTS + Keras TTS).
+## 6. SSL detector (the SOTA-family main system)
+Two stages, two containers — features are cached to disk between them.
+```bash
+bash scripts/setup_env_pytorch.sh                                   # torch-side deps
+DATA=$LA OUT=/models/$USER/ssl_xlsr sbatch scripts/extract_ssl.slurm   # PyTorch: cache frozen XLS-R features
+FEATS=/models/$USER/ssl_xlsr OUT=reports/ssl_run1 sbatch scripts/train_ssl.slurm  # TF: train the Keras back-end
+```
+Compare `reports/ssl_run1/result.json` EER against the CNN/RawNet2 baselines.
+
+## 7. Creation half (needs your recording in data/raw/source.wav)
+```bash
+# segment + transcribe your 1-5 min into an LJSpeech-style dataset (PyTorch container):
+apptainer exec --nv /opt/containers/pytorch-25.04.sif \
+    python -m src.creation.xtts_finetune.prepare --source data/raw/source.wav --out data/raw
+
+# A1 Keras baseline (TF container): train, then synthesize the >=10 prompts
+apptainer exec --nv /opt/containers/tensorflow-25.02.sif \
+    python -m src.creation.keras_tts.train --data-root data/raw --epochs 300 --out reports/tts_baseline
+apptainer exec --nv /opt/containers/tensorflow-25.02.sif \
+    python -m src.creation.keras_tts.synthesize --weights reports/tts_baseline/tts.weights.h5 --out data/generated/keras_tts
+
+# A2 XTTS-v2 (PyTorch container): zero-shot, then fine-tune, then synthesize
+apptainer exec --nv /opt/containers/pytorch-25.04.sif \
+    python -m src.creation.xtts_finetune.synthesize --mode zero_shot --out data/generated/xtts_zeroshot
+DATA=data/raw OUT=models/xtts_ft sbatch scripts/finetune_xtts.slurm
+apptainer exec --nv /opt/containers/pytorch-25.04.sif \
+    python -m src.creation.xtts_finetune.synthesize --mode finetuned --ckpt-dir models/xtts_ft/run/ --out data/generated/xtts_ft
+```
+
+## 8. Evaluation (the three required creation metrics)
+`src/evaluation/`: `spectrogram_sim` (MCD/SSIM), `speaker_sim` (ECAPA cosine, PyTorch
+container), `mos` (build a blind rating sheet with `build_test`, collect ratings, then
+`aggregate`). Compare real vs Keras-TTS vs XTTS.
+
+## 9. Cross-generator test (the contribution)
+```bash
+# spectrogram detector vs your own fakes + real reference:
+python -m src.detection.cross_test --model reports/run1/model.keras --model-type cnn \
+    --feat lfcc --fakes data/generated --real data/raw/wavs --out reports/cross
+```
+For the SSL detector, first cache your clips' features with `features_ssl.py`, then
+`cross_test --model-type ssl --ssl-manifest ...`.
+
+> Reminder: the TF/torch training paths are unrun until this server session — the metrics
+> math is unit-tested, but expect to fix a config detail or two on first run (I'm on SSH
+> to debug). Keep failed runs — they're the "show the process" evidence.
