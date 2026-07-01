@@ -70,6 +70,8 @@ def main() -> None:
     ap.add_argument("--out", default="reports/run", help="output dir for curves/model/scores")
     ap.add_argument("--asv-scores", default=None,
                     help="ASVspoof ASV dev score file -> also report min t-DCF")
+    ap.add_argument("--no-cache", action="store_true",
+                    help="disable the on-disk feature cache (re-extract every epoch)")
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
@@ -82,8 +84,11 @@ def main() -> None:
     dev_items = D.parse_protocol(args.data_root, "dev", args.limit)
     print(f"train={len(train_items)}  dev={len(dev_items)}  model={args.model}  feat={feat}")
 
-    train_ds = D.make_dataset(train_items, feat, cfg, args.batch_size, shuffle=True)
-    dev_ds = D.make_dataset(dev_items, feat, cfg, args.batch_size, shuffle=False)
+    cache_dir = None if args.no_cache else os.path.join(args.out, "cache")
+    train_ds = D.make_dataset(train_items, feat, cfg, args.batch_size, shuffle=True,
+                              cache=None if cache_dir is None else os.path.join(cache_dir, "train"))
+    dev_ds = D.make_dataset(dev_items, feat, cfg, args.batch_size, shuffle=False,
+                            cache=None if cache_dir is None else os.path.join(cache_dir, "dev"))
 
     model = build_rawnet2(D.N_SAMPLES, cfg.sr) if args.model == "rawnet2" else build_cnn(D.out_shape(feat, cfg))
     model.compile(

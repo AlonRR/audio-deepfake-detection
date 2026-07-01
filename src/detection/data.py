@@ -79,16 +79,21 @@ def extract(item: Item, feat: str, cfg: FeatureConfig) -> np.ndarray:
     return f[..., np.newaxis].astype(np.float32)
 
 
-def make_dataset(items, feat: str, cfg: FeatureConfig, batch_size: int, shuffle: bool):
-    """Build a batched tf.data.Dataset that lazily extracts features via a generator."""
+def make_dataset(items, feat: str, cfg: FeatureConfig, batch_size: int, shuffle: bool,
+                 cache: str | None = None):
+    """Build a batched tf.data.Dataset that lazily extracts features via a generator.
+
+    If ``cache`` is given, features are extracted exactly once (first epoch) and reused
+    from that on-disk cache on every later epoch. Without it, librosa re-extracts every
+    epoch, which dominates wall-clock on the full 25k-utterance set. The generator emits
+    in a fixed order so the cache is stable; shuffling is applied *after* the cache.
+    """
     import tensorflow as tf
 
     shape = out_shape(feat, cfg)
 
     def gen():
-        order = np.random.permutation(len(items)) if shuffle else range(len(items))
-        for i in order:
-            it = items[i]
+        for it in items:  # fixed order -> stable cache; shuffle happens after .cache()
             try:
                 yield extract(it, feat, cfg), np.int32(it.label)
             except Exception as exc:  # a corrupt/missing flac shouldn't kill training
@@ -101,8 +106,13 @@ def make_dataset(items, feat: str, cfg: FeatureConfig, batch_size: int, shuffle:
             tf.TensorSpec(shape=(), dtype=tf.int32),
         ),
     )
+    if cache is not None:
+        cache_parent = os.path.dirname(cache)
+        if cache_parent:
+            os.makedirs(cache_parent, exist_ok=True)
+        ds = ds.cache(cache)
     if shuffle:
-        ds = ds.shuffle(1024)
+        ds = ds.shuffle(2048)
     return ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
 
