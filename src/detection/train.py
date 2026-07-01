@@ -21,8 +21,8 @@ import numpy as np
 
 from src.common.audio import FeatureConfig
 from src.detection import data as D
-from src.detection.baseline_cnn import build_cnn
-from src.detection.evaluate import eer_from_scores, save_det_curve
+from src.detection.baseline_cnn import build_cnn, build_rawnet2
+from src.detection.evaluate import eer_from_scores, min_tdcf, save_det_curve
 
 
 def _plot_curves(history, out_dir: str) -> None:
@@ -60,12 +60,16 @@ def _score(model, ds) -> tuple[np.ndarray, np.ndarray]:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Train baseline CNN spoof detector on ASVspoof LA.")
     ap.add_argument("--data-root", required=True, help="ASVspoof2019 LA root folder")
-    ap.add_argument("--feat", choices=["logmel", "lfcc"], default="lfcc")
+    ap.add_argument("--model", choices=["cnn", "rawnet2"], default="cnn")
+    ap.add_argument("--feat", choices=["logmel", "lfcc"], default="lfcc",
+                    help="front-end for the CNN (ignored for rawnet2, which uses raw audio)")
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--batch-size", type=int, default=32)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--limit", type=int, default=None, help="cap #train/#dev items (smoke)")
     ap.add_argument("--out", default="reports/run", help="output dir for curves/model/scores")
+    ap.add_argument("--asv-scores", default=None,
+                    help="ASVspoof ASV dev score file -> also report min t-DCF")
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
@@ -73,15 +77,15 @@ def main() -> None:
 
     import keras
 
+    feat = "raw" if args.model == "rawnet2" else args.feat
     train_items = D.parse_protocol(args.data_root, "train", args.limit)
     dev_items = D.parse_protocol(args.data_root, "dev", args.limit)
-    print(f"train={len(train_items)}  dev={len(dev_items)}  feat={args.feat}")
+    print(f"train={len(train_items)}  dev={len(dev_items)}  model={args.model}  feat={feat}")
 
-    train_ds = D.make_dataset(train_items, args.feat, cfg, args.batch_size, shuffle=True)
-    dev_ds = D.make_dataset(dev_items, args.feat, cfg, args.batch_size, shuffle=False)
+    train_ds = D.make_dataset(train_items, feat, cfg, args.batch_size, shuffle=True)
+    dev_ds = D.make_dataset(dev_items, feat, cfg, args.batch_size, shuffle=False)
 
-    n_feat = cfg.n_mels if args.feat == "logmel" else cfg.n_lfcc
-    model = build_cnn((n_feat, cfg.max_frames, 1))
+    model = build_rawnet2(D.N_SAMPLES, cfg.sr) if args.model == "rawnet2" else build_cnn(D.out_shape(feat, cfg))
     model.compile(
         optimizer=keras.optimizers.Adam(args.lr),
         loss="sparse_categorical_crossentropy",
@@ -108,8 +112,10 @@ def main() -> None:
                    os.path.join(args.out, "det_dev.png"), title=f"DET (dev) EER={eer*100:.2f}%")
     np.savez(os.path.join(args.out, "dev_scores.npz"), scores=scores, labels=labels)
 
-    result = {"dev_eer_pct": round(eer * 100, 3), "threshold": thr,
-              "feat": args.feat, "epochs": args.epochs, "n_train": len(train_items)}
+    result = {"dev_eer_pct": round(eer * 100, 3), "threshold": thr, "model": args.model,
+              "feat": feat, "epochs": args.epochs, "n_train": len(train_items)}
+    if args.asv_scores:
+        result["min_tdcf"] = round(min_tdcf(scores[labels == 1], scores[labels == 0], args.asv_scores), 5)
     with open(os.path.join(args.out, "result.json"), "w", encoding="utf-8") as fh:
         json.dump(result, fh, indent=2)
     print(f"\nDEV EER = {eer*100:.2f}%   ->  {args.out}/result.json")
