@@ -54,9 +54,26 @@ def parse_protocol(root: str, subset: str, limit: int | None = None) -> list[Ite
     return items
 
 
+N_SAMPLES = 64_000  # ~4 s at 16 kHz — fixed raw-waveform length for RawNet2
+
+
+def _fix_wav(wav: np.ndarray, n: int) -> np.ndarray:
+    return wav[:n] if wav.size >= n else np.pad(wav, (0, n - wav.size))
+
+
+def out_shape(feat: str, cfg: FeatureConfig):
+    """Model input shape for a given front-end ('raw' -> waveform, else spectrogram)."""
+    if feat == "raw":
+        return (N_SAMPLES, 1)
+    n_feat = cfg.n_mels if feat == "logmel" else cfg.n_lfcc
+    return (n_feat, cfg.max_frames, 1)
+
+
 def extract(item: Item, feat: str, cfg: FeatureConfig) -> np.ndarray:
-    """Load one utterance -> fixed-size (F, T, 1) feature map."""
+    """Load one utterance -> spectrogram feature map (F, T, 1) or raw waveform (N, 1)."""
     wav = load_wav(item.path, cfg.sr)
+    if feat == "raw":
+        return _fix_wav(wav, N_SAMPLES)[:, np.newaxis].astype(np.float32)
     f = log_mel(wav, cfg) if feat == "logmel" else lfcc(wav, cfg)
     f = fix_length(f, cfg.max_frames)
     return f[..., np.newaxis].astype(np.float32)
@@ -66,7 +83,7 @@ def make_dataset(items, feat: str, cfg: FeatureConfig, batch_size: int, shuffle:
     """Build a batched tf.data.Dataset that lazily extracts features via a generator."""
     import tensorflow as tf
 
-    n_feat = cfg.n_mels if feat == "logmel" else cfg.n_lfcc
+    shape = out_shape(feat, cfg)
 
     def gen():
         order = np.random.permutation(len(items)) if shuffle else range(len(items))
@@ -80,7 +97,7 @@ def make_dataset(items, feat: str, cfg: FeatureConfig, batch_size: int, shuffle:
     ds = tf.data.Dataset.from_generator(
         gen,
         output_signature=(
-            tf.TensorSpec(shape=(n_feat, cfg.max_frames, 1), dtype=tf.float32),
+            tf.TensorSpec(shape=shape, dtype=tf.float32),
             tf.TensorSpec(shape=(), dtype=tf.int32),
         ),
     )
