@@ -1,0 +1,54 @@
+# ── Python / uv ───────────────────────────────────────────────────────────────
+.venv/
+.venv-*/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ── Large / generated artifacts (kept OFF OneDrive — ods sync is git-aware) ────
+# Datasets and model checkpoints are large and/or externally sourced: never sync.
+data/datasets/**
+!data/datasets/.gitkeep
+data/raw/**
+!data/raw/.gitkeep
+models/**
+!models/.gitkeep
+
+# Raw audio and feature caches. NOTE: the FINAL demo clips are force-added by hand
+# (see below) so they DO sync; everything else audio-shaped stays local.
+*.wav
+*.flac
+*.mp3
+*.npy
+*.npz
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.keras
+*.tfrecord
+
+# Keep the curated demo clips + report figures tracked (force-add when ready):
+#   git add -f data/generated/demo/*.wav reports/figures/*.png
+!data/generated/demo/
+!reports/figures/
+
+# ── Secrets — NEVER commit or sync (course lab creds live in OneDrive already) ──
+*.conf
+credentials*.txt
+*credential*
+*.key
+*.pem
+.env
+.env.*
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
