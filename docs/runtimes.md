@@ -7,8 +7,10 @@ where not separately instrumented.
 
 **Environment:** jobs run via `sbatch --gres=gpu:1` inside apptainer
 (`/opt/containers/tensorflow-25.02.sif`). Audio deps (librosa/soundfile/matplotlib)
-installed once into `~/adf/.pyuser` — see `scripts/lab_env.sh`. QOS cap = **2 h/job**
-(`bsc`); default account has only `bsc` + `debug` (30 m).
+installed once into `~/adf/.pyuser` — see `scripts/lab_env.sh`. QOS cap = **2 h/job**,
+**1 GPU concurrent** (`bsc`; jobs serialize — chain with `--dependency=afterok`).
+**Default job memory = 7 GB** (`cpu=1`); heavier jobs need `--mem` (log-mel needs
+≥ 16 GB, SSL back-end 32 GB) — see the OOM row below.
 
 ## Detection — GPU jobs (2026-07-01)
 
@@ -21,6 +23,12 @@ installed once into `~/adf/.pyuser` — see `scripts/lab_env.sh`. QOS cap = **2 
 | 242 | Baseline (subset) | 4 k | 12 | 8:37 | EER 0.0% = biased-subset artifact; per-epoch re-extract |
 | 243 | Full baseline (rejected) | — | — | — | QOS rejected 3 h `--time` (cap 2 h) |
 | 244 | **Baseline (full)** | 25 380 / 24 844 | 30 | **17:14** | **Dev EER 12.99% · min t-DCF 0.2817** (feature cache on) |
+| 246 | CNN-log-mel full (try 1) | 25 380 / 24 844 | 30 | 27:19 | ❌ OUT_OF_MEMORY — default 7 GB too small (peak 7.16 GB) |
+| 247 | SSL prep (transformers + XLS-R cache) | — | — | 1:46 | PyTorch container; transformers 5.3.0, hidden_size 1024 |
+| 248 | SSL XLS-R extract (train) | 25 380 | — | _running_ | frozen XLS-R-300M → (200, 1024) f16, resumable |
+| 249 | SSL XLS-R extract (dev) | 24 844 | — | _queued_ | chained after 248 |
+| 250 | SSL back-end (Keras) | — | 40 | _queued_ | 32 GB; → `reports/ssl_xlsr_run1` |
+| 251 | CNN-log-mel full (retry) | 25 380 / 24 844 | 30 | _queued_ | 16 GB; cache hit expected (fast) |
 
 Job 244 per-epoch (cache on): epoch 1 ≈ extract+cache ~50 k utterances; epochs 2–30 ≈
 ~25 s each on the L4. Without the cache the same run was projected at ~6 h.
