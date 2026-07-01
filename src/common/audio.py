@@ -44,6 +44,13 @@ def load_wav(path: str, target_sr: int = TARGET_SR) -> np.ndarray:
     return np.ascontiguousarray(wav, dtype=np.float32)
 
 
+def save_wav(path: str, wav: np.ndarray, sr: int = TARGET_SR) -> None:
+    """Write a mono float32 waveform to ``path`` (16-bit PCM)."""
+    import soundfile as sf
+
+    sf.write(path, np.asarray(wav, dtype=np.float32), sr, subtype="PCM_16")
+
+
 def log_mel(wav: np.ndarray, cfg: FeatureConfig = FeatureConfig()) -> np.ndarray:
     """Log-mel spectrogram, shape (n_mels, T). Powers -> dB, per-utterance normalized."""
     import librosa
