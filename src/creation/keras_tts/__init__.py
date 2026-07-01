@@ -1,13 +1,14 @@
-"""Baseline TTS (A1) — Tacotron2-style seq2seq built in Keras/TensorFlow.
+"""Baseline TTS (A1) — Tacotron2-style seq2seq built from scratch in Keras/TensorFlow.
 
-Course anchors: ML4.pptx (RNN/LSTM), attention.pptx (location-sensitive attention),
-exs/ex5 (Embedding -> GRU -> Dense) as the starting scaffold.
+Course anchors: ML4.pptx (RNN/LSTM), attention.pptx (attention), exs/ex5 (seq model).
+The deliberately weak baseline whose failure modes (attention collapse, exposure bias,
+Griffin-Lim artifacts) we analyse before moving to XTTS.
 
-TODO (implementation pass):
-    - text/phoneme encoder (Embedding -> BiLSTM)
-    - location-sensitive attention
-    - autoregressive LSTM mel-decoder + stop-token
-    - Griffin-Lim (baseline) / small neural vocoder -> waveform
-    - train() on the 1-5 min recording; log the learning curve; document failure modes
-      (attention collapse, exposure bias, Griffin-Lim artifacts).
+Modules:
+    audio_tts   invertible log-mel + Griffin-Lim vocoder
+    text        char-level vocab / encode-decode
+    dataset     (text, mel) pairs from an LJSpeech-style folder
+    model       encoder + Bahdanau-attention LSTM decoder + postnet (teacher-forced)
+    train       training CLI (+ loss curve)
+    synthesize  autoregressive inference -> wav
 """
