@@ -25,10 +25,10 @@ installed once into `~/adf/.pyuser` — see `scripts/lab_env.sh`. QOS cap = **2 
 | 244 | **Baseline (full)** | 25 380 / 24 844 | 30 | **17:14** | **Dev EER 12.99% · min t-DCF 0.2817** (feature cache on) |
 | 246 | CNN-log-mel full (try 1) | 25 380 / 24 844 | 30 | 27:19 | ❌ OUT_OF_MEMORY — default 7 GB too small (peak 7.16 GB) |
 | 247 | SSL prep (transformers + XLS-R cache) | — | — | 1:46 | PyTorch container; transformers 5.3.0, hidden_size 1024 |
-| 248 | SSL XLS-R extract (train) | 25 380 | — | _running_ | frozen XLS-R-300M → (200, 1024) f16, resumable |
-| 249 | SSL XLS-R extract (dev) | 24 844 | — | _queued_ | chained after 248 |
-| 250 | SSL back-end (Keras) | — | 40 | _queued_ | 32 GB; → `reports/ssl_xlsr_run1` |
-| 251 | CNN-log-mel full (retry) | 25 380 / 24 844 | 30 | _queued_ | 16 GB; cache hit expected (fast) |
+| 248 | SSL XLS-R extract (train) | 25 380 | — | **17:08** | frozen XLS-R-300M → (200,1024) f16; 8.1 GB cache |
+| 249 | SSL XLS-R extract (dev) | 24 844 | — | **15:12** | 8.0 GB cache |
+| 250 | **SSL back-end (Keras)** | 25 380 / 24 844 | 40 | **22:37** | **Dev EER 0.04% · min t-DCF 0.0004** |
+| 251 | CNN-log-mel full (retry, 16 GB) | 25 380 / 24 844 | 30 | **19:59** | Dev EER 18.99% · min t-DCF 0.4505 |
 
 Job 244 per-epoch (cache on): epoch 1 ≈ extract+cache ~50 k utterances; epochs 2–30 ≈
 ~25 s each on the L4. Without the cache the same run was projected at ~6 h.
@@ -48,11 +48,16 @@ future large transfers will be timed explicitly.
 
 ## Key result progression (dev EER)
 
-| Setup | Dev EER | Note |
-|-------|:-------:|------|
-| Subset 4 k (biased) | 0.0% | misleading — one attack type, trivially separable |
-| **Full LA · CNN-LFCC baseline** | **12.99%** | first defensible baseline (min t-DCF 0.2817) |
-| SSL (XLS-R) + Keras back-end | _todo_ | target: substantially lower (SSL SOTA < 1%) |
+| Setup (full LA, dev) | Dev EER | min t-DCF | Note |
+|-------|:-------:|:-------:|------|
+| Subset 4 k (biased) | 0.0% | 0.0 | misleading — one attack type, trivially separable |
+| CNN · log-mel | 18.99% | 0.4505 | weakest hand-crafted front-end |
+| CNN · LFCC | 12.99% | 0.2817 | standard ASVspoof front-end |
+| **SSL XLS-R + Keras back-end** | **0.04%** | **0.0004** | frozen SSL frontend — huge gain |
+
+**Caveat:** dev shares its 6 attack types (A01–A06) with train, so these dev numbers are
+optimistic. The **eval** set (A07–A19, *unseen* attacks) is the real generalization test —
+that run is next, and is where the SSL frontend's advantage over the CNNs should really show.
 
 ## How timings are recorded
 - **GPU jobs:** pull with `sacct -X -j <id> --format=JobName,Elapsed,State,Start,End`
