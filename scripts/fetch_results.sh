@@ -31,6 +31,11 @@ pull() {  # $1=run  $2=score file name
 echo "== dev runs =="; for r in $RUNS_DEV;  do pull "$r" dev_scores.npz;  done
 echo "== eval runs =="; for r in $RUNS_EVAL; do pull "$r" eval_scores.npz; done
 echo "== process runs =="; for r in $RUNS_PROCESS; do pull "$r" dev_scores.npz; done
+# hp-sweep runs are dynamic (ssl_hp_<tag>) -> discover them on the server
+echo "== hp-sweep runs =="
+for r in $(ssh "$REMOTE" 'ls -d ~/adf/reports/ssl_hp_* 2>/dev/null | xargs -n1 basename' 2>/dev/null); do
+  pull "$r" dev_scores.npz
+done
 echo
 echo "Next: regenerate figures ->"
 echo "  uv run --no-project --with numpy --with matplotlib --with scipy python scripts/plot_detection.py"

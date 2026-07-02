@@ -1,0 +1,12 @@
+{
+  "dev_eer_pct": 0.04,
+  "threshold": 0.005346998106688261,
+  "n_train": 25380,
+  "feat_dim": 1024,
+  "lr": 0.001,
+  "proj": 256,
+  "dropout": 0.3,
+  "epochs": 25,
+  "batch_size": 64,
+  "min_tdcf": 0.00126
+}
