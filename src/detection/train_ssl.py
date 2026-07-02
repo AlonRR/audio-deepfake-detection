@@ -29,6 +29,8 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=40)
     ap.add_argument("--batch-size", type=int, default=64)
     ap.add_argument("--lr", type=float, default=1e-3)
+    ap.add_argument("--proj", type=int, default=256, help="Conv1D projection width")
+    ap.add_argument("--dropout", type=float, default=0.3)
     ap.add_argument("--out", default="reports/ssl_run")
     ap.add_argument("--asv-scores", default=None, help="ASVspoof ASV dev score file -> min t-DCF")
     args = ap.parse_args()
@@ -44,7 +46,7 @@ def main() -> None:
     train_ds = DS.make_dataset(train_e, args.batch_size, shuffle=True)
     dev_ds = DS.make_dataset(dev_e, args.batch_size, shuffle=False)
 
-    model = build_backend(d, max_frames)
+    model = build_backend(d, max_frames, proj=args.proj, dropout=args.dropout)
     model.compile(optimizer=keras.optimizers.Adam(args.lr),
                   loss="sparse_categorical_crossentropy", metrics=["accuracy"])
     model.summary()
@@ -66,7 +68,9 @@ def main() -> None:
                    os.path.join(args.out, "det_dev.png"), title=f"SSL DET (dev) EER={eer*100:.2f}%")
     np.savez(os.path.join(args.out, "dev_scores.npz"), scores=scores, labels=labels)
     result = {"dev_eer_pct": round(eer * 100, 3), "threshold": thr,
-              "n_train": len(train_e), "feat_dim": d}
+              "n_train": len(train_e), "feat_dim": d,
+              "lr": args.lr, "proj": args.proj, "dropout": args.dropout,
+              "epochs": args.epochs, "batch_size": args.batch_size}
     if args.asv_scores:
         result["min_tdcf"] = round(min_tdcf(scores[labels == 1], scores[labels == 0], args.asv_scores), 5)
     with open(os.path.join(args.out, "result.json"), "w", encoding="utf-8") as fh:
