@@ -33,10 +33,12 @@ do0p5 0.001 256 0.5
 "
 echo "$CONFIGS" | while read tag lr proj dropout; do
   [ -z "$tag" ] && continue
+  OUT="reports/ssl_hp_$tag"
+  if [ -f "$OUT/result.json" ]; then echo "skip $tag (already done)"; continue; fi
   echo "===== HP $tag  lr=$lr proj=$proj dropout=$dropout ====="
   python3 -m src.detection.train_ssl --train "$TR" --dev "$DV" \
     --epochs 25 --batch-size 64 --lr "$lr" --proj "$proj" --dropout "$dropout" \
-    --out "reports/ssl_hp_$tag" --asv-scores "$ASV" || echo "HP-$tag-FAILED"
+    --out "$OUT" --asv-scores "$ASV" || echo "HP-$tag-FAILED"
 done
 '
 echo SSL-HP-DONE
