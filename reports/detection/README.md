@@ -11,7 +11,7 @@ Each `<run>/` holds `result.json` (metrics), `history.csv` (learning-curve data)
 | `base_cnn_logmel_full` | CNN · log-mel | dev | 18.99% | 0.4505 |
 | `base_cnn_lfcc_full` | CNN · LFCC | dev | 12.99% | 0.2817 |
 | `base_cnn_lfcc_eval` | CNN · LFCC | eval | 18.55% | 0.3835 |
-| `base_rawnet2_full` | RawNet2 (raw) | dev | _running_ | — |
+| `base_rawnet2_full` | RawNet2 (raw) | dev | collapsed (≈chance) | — |
 | `ssl_xlsr_run1` | **SSL XLS-R + Keras** | dev | **0.04%** | 0.0004 |
 | `ssl_xlsr_eval` | **SSL XLS-R + Keras** | eval | **0.668%** | 0.0189 |
 
