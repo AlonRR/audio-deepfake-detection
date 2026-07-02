@@ -1,0 +1,8 @@
+{
+  "dev_eer_pct": 5.0,
+  "threshold": 0.3953174948692322,
+  "model": "rawnet2",
+  "feat": "raw",
+  "epochs": 2,
+  "n_train": 40
+}
