@@ -27,8 +27,10 @@ Data-driven results for the two halves. **Detection is complete**; **creation is
 |---|---:|---:|---:|
 | CNN · log-mel | 18.99% | — | — |
 | CNN · LFCC | 12.99% | 18.55% | 0.3835 |
-| RawNet2 (raw) | _running_ | _todo_ | _todo_ |
+| RawNet2 (raw, from scratch) | collapsed † | — | — |
 | **SSL XLS-R + Keras back-end** | **0.04%** | **0.668%** | **0.0189** |
+
+† RawNet2 trained from scratch **failed to converge** on our budget — see B.4(4).
 
 Figures: `reports/figures/eer_tdcf_comparison.png`, `det_eval_overlay.png`,
 `det_dev_overlay.png`, and per-run learning curves.
@@ -55,9 +57,16 @@ Figures: `reports/figures/eer_tdcf_comparison.png`, `det_eval_overlay.png`,
 3. **Infra failures & fixes** (see `runtimes.md`): OOM on the 7 GB default memory (log-mel
    peak 7.16 GB; XLS-R extractor leaks ~7 GB / 27k utts) → `--mem` 16–32 GB; home **~50 GB
    quota** exceeded mid eval-extraction → prune caches + resumable extraction.
-4. **Hyper-parameter search + a deliberate failed run** — _SCAFFOLD (next):_ sweep the SSL
-   back-end (learning rate, pooling type, dropout, projection width) and include one
-   over-/under-fit run with analysis. Requires re-extracting SSL features (freed for quota).
+4. **RawNet2 collapsed (documented failed baseline).** Trained from scratch, `val_accuracy`
+   pinned at **0.897 — exactly the majority-class (spoof) rate** — while training accuracy
+   *drifted down*; it never learned to discriminate (EER ≈ chance). A known RawNet2
+   from-scratch sensitivity (learning-rate / SincConv init). Cancelled before the 2 h cap.
+   Kept as evidence (`base_rawnet2_full/history.csv`); the SSL result stands as the strong
+   model, CNN-LFCC as the working hand-crafted baseline.
+5. **SSL back-end hyper-parameter search + a deliberate failed run** — _running now_
+   (jobs 265→266 re-extract features, 267 sweeps). LR sweep {1e-4 … 1e-1} + proj/dropout
+   variants; **lr=1e-1 is the intentional divergence**. Results table + LR-vs-EER plot land
+   here when the sweep finishes.
 
 ### B.5 Innovation — cross-generator test *(scaffold; needs creation half)*
 Score the trained detector on our **own** XTTS / Keras-TTS clips — an unseen, 2025-era

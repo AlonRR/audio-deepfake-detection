@@ -35,6 +35,10 @@ are ~21 GB — deleted after scoring; train/dev caches deleted, re-extract if re
 | 261 | SSL eval extract (32 GB, resumed) | 71 237 | — | 31:44 | frozen XLS-R → (200,1024) f16 (deleted after scoring) |
 | 262 | **SSL eval score** | 71 237 | — | **4:35** | **Eval EER 0.668% · min t-DCF 0.0189** |
 | 263 | **CNN-LFCC eval score** | 71 237 | — | **9:34** | **Eval EER 18.55% · min t-DCF 0.3835** |
+| 264 | RawNet2 full (from scratch) | 25 380 / 24 844 | 25 (cap) | 1:37 (cancelled) | ❌ **collapsed** — val acc pinned at 0.897 (majority class), no convergence; documented failed baseline |
+| 265 | SSL XLS-R re-extract (train) | 25 380 | — | _running_ | features re-extracted for the hp-search (freed earlier for quota) |
+| 266 | SSL XLS-R re-extract (dev) | 24 844 | — | _pending_ | `afterok:265` |
+| 267 | SSL back-end hp-sweep | 25 380 / 24 844 | 25 × 8 cfg | _pending_ | `afterok:266`; LR sweep {1e-4…1e-1} + proj/dropout; lr=1e-1 = deliberate failure |
 
 Job 244 per-epoch (cache on): epoch 1 ≈ extract+cache ~50 k utterances; epochs 2–30 ≈
 ~25 s each on the L4. Without the cache the same run was projected at ~6 h.
