@@ -1,0 +1,7 @@
+{
+  "dev_eer_pct": 0.04,
+  "threshold": 0.019229276105761528,
+  "n_train": 25380,
+  "feat_dim": 1024,
+  "min_tdcf": 0.0004
+}

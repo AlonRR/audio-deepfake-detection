@@ -36,6 +36,8 @@ models/**
 #   git add -f data/generated/demo/*.wav reports/figures/*.png
 !data/generated/demo/
 !reports/figures/
+# Small per-run score files that back the report figures DO get tracked:
+!reports/detection/**/*.npz
 
 # ── Secrets — NEVER commit or sync (course lab creds live in OneDrive already) ──
 *.conf

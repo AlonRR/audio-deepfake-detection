@@ -1,0 +1,9 @@
+{
+  "subset": "eval",
+  "mode": "ssl",
+  "eer_pct": 0.668,
+  "threshold": 0.9986598491668701,
+  "n": 71237,
+  "n_bonafide": 7355,
+  "min_tdcf": 0.01885
+}

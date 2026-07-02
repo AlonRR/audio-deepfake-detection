@@ -1,0 +1,9 @@
+{
+  "subset": "eval",
+  "mode": "cnn",
+  "eer_pct": 18.545,
+  "threshold": 0.2559485137462616,
+  "n": 71237,
+  "n_bonafide": 7355,
+  "min_tdcf": 0.38346
+}

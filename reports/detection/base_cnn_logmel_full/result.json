@@ -1,0 +1,9 @@
+{
+  "dev_eer_pct": 18.995,
+  "threshold": 0.09116414934396744,
+  "model": "cnn",
+  "feat": "logmel",
+  "epochs": 30,
+  "n_train": 25380,
+  "min_tdcf": 0.45053
+}
