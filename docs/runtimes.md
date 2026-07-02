@@ -9,8 +9,10 @@ where not separately instrumented.
 (`/opt/containers/tensorflow-25.02.sif`). Audio deps (librosa/soundfile/matplotlib)
 installed once into `~/adf/.pyuser` — see `scripts/lab_env.sh`. QOS cap = **2 h/job**,
 **1 GPU concurrent** (`bsc`; jobs serialize — chain with `--dependency=afterok`).
-**Default job memory = 7 GB** (`cpu=1`); heavier jobs need `--mem` (log-mel needs
-≥ 16 GB, SSL back-end 32 GB) — see the OOM row below.
+**Default job memory = 7 GB** (`cpu=1`); heavier jobs need `--mem` (log-mel ≥ 16 GB,
+SSL back-end + eval extraction 32 GB — the XLS-R extractor leaks ~7 GB per ~27k utts).
+**Home has a ~50 GB quota**, so delete zips/feature-caches after use (eval SSL features
+are ~21 GB — deleted after scoring; train/dev caches deleted, re-extract if retraining).
 
 ## Detection — GPU jobs (2026-07-01)
 
@@ -29,6 +31,10 @@ installed once into `~/adf/.pyuser` — see `scripts/lab_env.sh`. QOS cap = **2 
 | 249 | SSL XLS-R extract (dev) | 24 844 | — | **15:12** | 8.0 GB cache |
 | 250 | **SSL back-end (Keras)** | 25 380 / 24 844 | 40 | **22:37** | **Dev EER 0.04% · min t-DCF 0.0004** |
 | 251 | CNN-log-mel full (retry, 16 GB) | 25 380 / 24 844 | 30 | **19:59** | Dev EER 18.99% · min t-DCF 0.4505 |
+| 252 | SSL eval extract (try 1, 7 GB) | 71 237 | — | 20:12 | ❌ RAM OOM at ~27.5k, then home-quota exceeded |
+| 261 | SSL eval extract (32 GB, resumed) | 71 237 | — | 31:44 | frozen XLS-R → (200,1024) f16 (deleted after scoring) |
+| 262 | **SSL eval score** | 71 237 | — | **4:35** | **Eval EER 0.668% · min t-DCF 0.0189** |
+| 263 | **CNN-LFCC eval score** | 71 237 | — | **9:34** | **Eval EER 18.55% · min t-DCF 0.3835** |
 
 Job 244 per-epoch (cache on): epoch 1 ≈ extract+cache ~50 k utterances; epochs 2–30 ≈
 ~25 s each on the L4. Without the cache the same run was projected at ~6 h.
@@ -48,16 +54,16 @@ future large transfers will be timed explicitly.
 
 ## Key result progression (dev EER)
 
-| Setup (full LA, dev) | Dev EER | min t-DCF | Note |
-|-------|:-------:|:-------:|------|
-| Subset 4 k (biased) | 0.0% | 0.0 | misleading — one attack type, trivially separable |
-| CNN · log-mel | 18.99% | 0.4505 | weakest hand-crafted front-end |
-| CNN · LFCC | 12.99% | 0.2817 | standard ASVspoof front-end |
-| **SSL XLS-R + Keras back-end** | **0.04%** | **0.0004** | frozen SSL frontend — huge gain |
+| Detector (full LA) | Dev EER | Eval EER | Eval min t-DCF | Note |
+|-------|:-------:|:-------:|:-------:|------|
+| CNN · log-mel | 18.99% | — | — | weakest hand-crafted front-end |
+| CNN · LFCC | 12.99% | **18.55%** | 0.3835 | degrades on unseen attacks (poor generalization) |
+| **SSL XLS-R + Keras back-end** | **0.04%** | **0.668%** | 0.0189 | barely degrades — SOTA-competitive generalization |
 
-**Caveat:** dev shares its 6 attack types (A01–A06) with train, so these dev numbers are
-optimistic. The **eval** set (A07–A19, *unseen* attacks) is the real generalization test —
-that run is next, and is where the SSL frontend's advantage over the CNNs should really show.
+Dev shares its 6 attack types (A01–A06) with train, so dev EER is optimistic; **eval**
+(A07–A19, *unseen*) is the real test. The hand-crafted CNN degrades (12.99 → 18.55 %),
+while the SSL frontend holds (0.04 → 0.67 %) — **~28× lower eval EER**. This gap is the
+core detection result and the "show the process" arc.
 
 ## How timings are recorded
 - **GPU jobs:** pull with `sacct -X -j <id> --format=JobName,Elapsed,State,Start,End`
