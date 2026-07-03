@@ -63,10 +63,23 @@ Figures: `reports/figures/eer_tdcf_comparison.png`, `det_eval_overlay.png`,
    from-scratch sensitivity (learning-rate / SincConv init). Cancelled before the 2 h cap.
    Kept as evidence (`base_rawnet2_full/history.csv`); the SSL result stands as the strong
    model, CNN-LFCC as the working hand-crafted baseline.
-5. **SSL back-end hyper-parameter search + a deliberate failed run** — _running now_
-   (jobs 265→266 re-extract features, 267 sweeps). LR sweep {1e-4 … 1e-1} + proj/dropout
-   variants; **lr=1e-1 is the intentional divergence**. Results table + LR-vs-EER plot land
-   here when the sweep finishes.
+5. **SSL back-end hyper-parameter search + a deliberate failed run** *(complete)*. Swept the
+   back-end learning rate on the cached features (proj=256, dropout=0.3):
+
+   | lr | 1e-4 | 3e-4 | 1e-3 | 3e-3 | 1e-2 | 1e-1 |
+   |----|-----:|-----:|-----:|-----:|-----:|-----:|
+   | dev EER | **0.033%** | 0.033% | 0.040% | 0.040% | 1.338% | diverged |
+   | min t-DCF | 0.00027 | 0.00027 | 0.00126 | 0.00045 | 0.03075 | — |
+
+   **Read:** robust for lr ≤ 3e-3 (dev EER ~0.03–0.04%); at lr=1e-2 it degrades ~30×
+   (1.34%); at **lr=1e-1 it diverges** — training loss spikes to 9.1 at epoch 0 and
+   val-accuracy oscillates between all-bonafide (0.10) and all-spoof (0.90), never learning.
+   That is the **deliberate failed run**. Best config **lr=1e-4 (0.033% dev EER)**, a small
+   consistent gain over the 1e-3 default. Figure: `reports/figures/ssl_lr_sweep.png`.
+   (Architecture variants proj=128 / dropout=0.5 were left un-run: each config takes ~24 min
+   because `data_ssl` re-reads all 25k features per epoch, and dev is saturated near 0, so LR
+   was the informative axis. Ran as two 2 h jobs, 267+268, both hitting the cap — the sweep
+   was made resumable via a per-config `result.json` skip-guard.)
 
 ### B.5 Innovation — cross-generator test *(scaffold; needs creation half)*
 Score the trained detector on our **own** XTTS / Keras-TTS clips — an unseen, 2025-era

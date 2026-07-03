@@ -38,7 +38,11 @@ are ~21 GB — deleted after scoring; train/dev caches deleted, re-extract if re
 | 264 | RawNet2 full (from scratch) | 25 380 / 24 844 | 25 (cap) | 1:37 (cancelled) | ❌ **collapsed** — val acc pinned at 0.897 (majority class), no convergence; documented failed baseline |
 | 265 | SSL XLS-R re-extract (train) | 25 380 | — | _running_ | features re-extracted for the hp-search (freed earlier for quota) |
 | 266 | SSL XLS-R re-extract (dev) | 24 844 | — | _pending_ | `afterok:265` |
-| 267 | SSL back-end hp-sweep | 25 380 / 24 844 | 25 × 8 cfg | _pending_ | `afterok:266`; LR sweep {1e-4…1e-1} + proj/dropout; lr=1e-1 = deliberate failure |
+| 267 | SSL hp-sweep (part 1) | 25 380 / 24 844 | 25/cfg | 2:00 (cap) | 5 LR cfgs done (~24 min each — `data_ssl` re-reads features/epoch); TIMEOUT before rest |
+| 268 | SSL hp-sweep (resume) | 25 380 / 24 844 | 25/cfg | 2:00 (cap) | lr1e2 done (EER 1.338%) + lr1e1 **divergence** captured (loss→9.1); TIMEOUT; resumable via result.json skip-guard |
+
+**HP-search result (LR sweep, dev):** best **lr=1e-4 → 0.033% EER** (min t-DCF 0.00027);
+robust ≤ 3e-3; lr=1e-2 → 1.338%; **lr=1e-1 diverged = deliberate failed run**.
 
 Job 244 per-epoch (cache on): epoch 1 ≈ extract+cache ~50 k utterances; epochs 2–30 ≈
 ~25 s each on the L4. Without the cache the same run was projected at ~6 h.
