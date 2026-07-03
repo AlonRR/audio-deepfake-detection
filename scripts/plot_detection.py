@@ -6,6 +6,7 @@ Run from the repo root:
 Reads reports/detection/<run>/{dev,eval}_scores.npz (+ result.json for EER labels),
 writes figures to reports/figures/. Everything needed to rebuild the graphs is tracked.
 """
+import glob
 import json
 import os
 
@@ -122,5 +123,34 @@ for ax, dv, ev, ttl, ylab, floor in [
                     ha="center", va="bottom", fontsize=8, color="gray" if miss else "black")
 fig.tight_layout(); fig.savefig(os.path.join(FIG, "eer_tdcf_comparison.png"), dpi=150); plt.close(fig)
 print("wrote eer_tdcf_comparison.png")
+
+# --- SSL back-end learning-rate sweep (dev); lr=1e-1 diverged (no result.json) ---
+sweep = []
+for p in sorted(glob.glob(os.path.join(DET, "ssl_hp_lr*", "result.json"))):
+    r = json.load(open(p))
+    if r.get("proj") == 256 and r.get("dropout") == 0.3:
+        sweep.append((r["lr"], r["dev_eer_pct"]))
+sweep.sort()
+fail_dir = os.path.join(DET, "ssl_hp_lr1e1_FAIL")
+has_fail = (os.path.exists(os.path.join(fail_dir, "history.csv"))
+            and not os.path.exists(os.path.join(fail_dir, "result.json")))
+if sweep:
+    lrs = [s[0] for s in sweep]; eers = [s[1] for s in sweep]
+    fig, ax = plt.subplots(figsize=(7, 4.6))
+    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.plot(lrs, eers, "o-", color="tab:green", lw=2, label="dev EER (%)")
+    for lr, eer in sweep:
+        ax.annotate(f"{eer:.3f}", (lr, eer), textcoords="offset points",
+                    xytext=(0, 7), ha="center", fontsize=8)
+    if has_fail:
+        ax.plot([0.1], [50.0], "X", color="tab:red", markersize=13,
+                label="lr=1e-1 diverged (loss->9.1)")
+        ax.annotate("diverged", (0.1, 50.0), textcoords="offset points",
+                    xytext=(0, -16), ha="center", color="tab:red", fontsize=8)
+    ax.set_xlabel("learning rate (log)"); ax.set_ylabel("dev EER %  (log)")
+    ax.set_title("SSL back-end: learning-rate sweep (dev)")
+    ax.grid(True, which="both", ls=":", alpha=0.5); ax.legend()
+    fig.tight_layout(); fig.savefig(os.path.join(FIG, "ssl_lr_sweep.png"), dpi=150); plt.close(fig)
+    print("wrote ssl_lr_sweep.png")
 
 print("done ->", FIG)
