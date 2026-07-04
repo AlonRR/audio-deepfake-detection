@@ -6,9 +6,11 @@ Run from the repo root:
 Reads reports/detection/<run>/{dev,eval}_scores.npz (+ result.json for EER labels),
 writes figures to reports/figures/. Everything needed to rebuild the graphs is tracked.
 """
+import csv
 import glob
 import json
 import os
+import re
 
 import numpy as np
 import matplotlib
@@ -124,28 +126,55 @@ for ax, dv, ev, ttl, ylab, floor in [
 fig.tight_layout(); fig.savefig(os.path.join(FIG, "eer_tdcf_comparison.png"), dpi=150); plt.close(fig)
 print("wrote eer_tdcf_comparison.png")
 
-# --- SSL back-end learning-rate sweep (dev); lr=1e-1 diverged (no result.json) ---
-sweep = []
-for p in sorted(glob.glob(os.path.join(DET, "ssl_hp_lr*", "result.json"))):
-    r = json.load(open(p))
-    if r.get("proj") == 256 and r.get("dropout") == 0.3:
-        sweep.append((r["lr"], r["dev_eer_pct"]))
+# --- SSL back-end learning-rate sweep (dev) ---
+# The LR sweep holds proj=256 / dropout=0.3 fixed (scripts/hp_ssl.slurm). *_FAIL dirs
+# are deliberate failures identified by name — never sweep points, even if a resumed
+# job someday drops a result.json into one.
+SWEEP_PROJ, SWEEP_DROPOUT = 256, 0.3
+SWEEP_FLOOR = 0.01  # log-axis floor (same as the bar chart); an exact-0 EER still plots
+sweep, sweep_skipped = [], []
+for p in glob.glob(os.path.join(DET, "ssl_hp_lr*", "result.json")):
+    run = os.path.basename(os.path.dirname(p))
+    if run.endswith("_FAIL"):
+        continue
+    try:
+        with open(p) as fh:
+            r = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        sweep_skipped.append(run); continue
+    lr, eer, proj, drop = (r.get(k) for k in ("lr", "dev_eer_pct", "proj", "dropout"))
+    if (None in (lr, eer, proj, drop) or proj != SWEEP_PROJ
+            or abs(drop - SWEEP_DROPOUT) > 1e-6):
+        sweep_skipped.append(run); continue
+    sweep.append((lr, eer))
 sweep.sort()
-fail_dir = os.path.join(DET, "ssl_hp_lr1e1_FAIL")
-has_fail = (os.path.exists(os.path.join(fail_dir, "history.csv"))
-            and not os.path.exists(os.path.join(fail_dir, "result.json")))
+if sweep_skipped:
+    print("sweep: skipped (unreadable or off-axis):", ", ".join(sweep_skipped))
+
+# Deliberate failures: lr parsed from the dir name (lr<m>e<x> = m*10^-x), peak loss
+# from the tracked history.csv. No EER was ever scored for these.
+fails = []
+for d in glob.glob(os.path.join(DET, "ssl_hp_lr*_FAIL")):
+    m = re.fullmatch(r"ssl_hp_lr(\d)e(\d)_FAIL", os.path.basename(d))
+    hist = os.path.join(d, "history.csv")
+    if not (m and os.path.exists(hist)):
+        continue
+    with open(hist) as fh:
+        peak = max(float(row["loss"]) for row in csv.DictReader(fh))
+    fails.append((int(m.group(1)) * 10.0 ** -int(m.group(2)), peak))
+
 if sweep:
-    lrs = [s[0] for s in sweep]; eers = [s[1] for s in sweep]
+    lrs = [s[0] for s in sweep]; eers = [max(s[1], SWEEP_FLOOR) for s in sweep]
     fig, ax = plt.subplots(figsize=(7, 4.6))
     ax.set_xscale("log"); ax.set_yscale("log")
     ax.plot(lrs, eers, "o-", color="tab:green", lw=2, label="dev EER (%)")
-    for lr, eer in sweep:
-        ax.annotate(f"{eer:.3f}", (lr, eer), textcoords="offset points",
+    for (lr, eer), y in zip(sweep, eers):
+        ax.annotate(f"{eer:.3f}", (lr, y), textcoords="offset points",
                     xytext=(0, 7), ha="center", fontsize=8)
-    if has_fail:
-        ax.plot([0.1], [50.0], "X", color="tab:red", markersize=13,
-                label="lr=1e-1 diverged (loss->9.1)")
-        ax.annotate("diverged", (0.1, 50.0), textcoords="offset points",
+    for lr, peak in fails:  # marked at the 50% chance line, not a measured EER
+        ax.plot([lr], [50.0], "X", color="tab:red", markersize=13,
+                label=f"lr={lr:g} diverged (loss {peak:.1f}, no EER)")
+        ax.annotate("diverged", (lr, 50.0), textcoords="offset points",
                     xytext=(0, -16), ha="center", color="tab:red", fontsize=8)
     ax.set_xlabel("learning rate (log)"); ax.set_ylabel("dev EER %  (log)")
     ax.set_title("SSL back-end: learning-rate sweep (dev)")
