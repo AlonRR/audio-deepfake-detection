@@ -14,7 +14,7 @@ SSL back-end + eval extraction 32 GB — the XLS-R extractor leaks ~7 GB per ~27
 **Home has a ~50 GB quota**, so delete zips/feature-caches after use (eval SSL features
 are ~21 GB — deleted after scoring; train/dev caches deleted, re-extract if retraining).
 
-## Detection — GPU jobs (2026-07-01)
+## Detection — GPU jobs (2026-07-01 → 07-02)
 
 | Job | Stage | Data scale | Epochs | Wall time | Result / note |
 |----:|-------|-----------|:------:|:---------:|---------------|
@@ -36,13 +36,14 @@ are ~21 GB — deleted after scoring; train/dev caches deleted, re-extract if re
 | 262 | **SSL eval score** | 71 237 | — | **4:35** | **Eval EER 0.668% · min t-DCF 0.0189** |
 | 263 | **CNN-LFCC eval score** | 71 237 | — | **9:34** | **Eval EER 18.55% · min t-DCF 0.3835** |
 | 264 | RawNet2 full (from scratch) | 25 380 / 24 844 | 25 (cap) | 1:37 (cancelled) | ❌ **collapsed** — val acc pinned at 0.897 (majority class), no convergence; documented failed baseline |
-| 265 | SSL XLS-R re-extract (train) | 25 380 | — | _running_ | features re-extracted for the hp-search (freed earlier for quota) |
-| 266 | SSL XLS-R re-extract (dev) | 24 844 | — | _pending_ | `afterok:265` |
-| 267 | SSL hp-sweep (part 1) | 25 380 / 24 844 | 25/cfg | 2:00 (cap) | 5 LR cfgs done (~24 min each — `data_ssl` re-reads features/epoch); TIMEOUT before rest |
-| 268 | SSL hp-sweep (resume) | 25 380 / 24 844 | 25/cfg | 2:00 (cap) | lr1e2 done (EER 1.338%) + lr1e1 **divergence** captured (loss→9.1); TIMEOUT; resumable via result.json skip-guard |
+| 265 | SSL XLS-R re-extract (train) | 25 380 | — | **12:44** | features re-extracted for the hp-search (freed earlier for quota) |
+| 266 | SSL XLS-R re-extract (dev) | 24 844 | — | **12:46** | `afterok:265` |
+| 267 | SSL hp-sweep (part 1) | 25 380 / 24 844 | 15–24/cfg (early-stop) | 2:00 (cap) | 4 LR cfgs done (lr1e4/3e4/1e3/3e3, ~21–32 min each — `data_ssl` re-reads features/epoch); TIMEOUT mid-lr1e2 |
+| 268 | SSL hp-sweep (resume) | 25 380 / 24 844 | 11 + 2 | 2:00 (cap) | lr1e2 done (EER 1.338%, early-stop @11) + lr1e1 **divergence** captured (loss 9.11, 2 epochs); epochs ran ~5× slower than 267 (shared node) → TIMEOUT mid-lr1e1; proj128/do0p5 never started; resumable via result.json skip-guard (+`*_FAIL` guard) |
 
-**HP-search result (LR sweep, dev):** best **lr=1e-4 → 0.033% EER** (min t-DCF 0.00027);
-robust ≤ 3e-3; lr=1e-2 → 1.338%; **lr=1e-1 diverged = deliberate failed run**.
+**HP-search result (LR sweep, dev):** best **lr=1e-4 / 3e-4 (exact tie) → 0.033% EER**
+(min t-DCF 0.00027); robust ≤ 3e-3; lr=1e-2 → 1.338% via best-checkpoint rescue (training
+itself destabilized); **lr=1e-1 diverged = deliberate failed run** (no EER scored).
 
 Job 244 per-epoch (cache on): epoch 1 ≈ extract+cache ~50 k utterances; epochs 2–30 ≈
 ~25 s each on the L4. Without the cache the same run was projected at ~6 h.

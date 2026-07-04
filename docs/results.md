@@ -66,20 +66,30 @@ Figures: `reports/figures/eer_tdcf_comparison.png`, `det_eval_overlay.png`,
 5. **SSL back-end hyper-parameter search + a deliberate failed run** *(complete)*. Swept the
    back-end learning rate on the cached features (proj=256, dropout=0.3):
 
-   | lr | 1e-4 | 3e-4 | 1e-3 | 3e-3 | 1e-2 | 1e-1 |
+   | lr | 1e-4 | 3e-4 | 1e-3 | 3e-3 | 1e-2 † | 1e-1 ‡ |
    |----|-----:|-----:|-----:|-----:|-----:|-----:|
-   | dev EER | **0.033%** | 0.033% | 0.040% | 0.040% | 1.338% | diverged |
-   | min t-DCF | 0.00027 | 0.00027 | 0.00126 | 0.00045 | 0.03075 | — |
+   | dev EER | **0.033%** | **0.033%** | 0.040% | 0.040% | 1.338% | diverged |
+   | min t-DCF | **0.00027** | **0.00027** | 0.00126 | 0.00045 | 0.03075 | — |
 
-   **Read:** robust for lr ≤ 3e-3 (dev EER ~0.03–0.04%); at lr=1e-2 it degrades ~30×
-   (1.34%); at **lr=1e-1 it diverges** — training loss spikes to 9.1 at epoch 0 and
-   val-accuracy oscillates between all-bonafide (0.10) and all-spoof (0.90), never learning.
-   That is the **deliberate failed run**. Best config **lr=1e-4 (0.033% dev EER)**, a small
-   consistent gain over the 1e-3 default. Figure: `reports/figures/ssl_lr_sweep.png`.
-   (Architecture variants proj=128 / dropout=0.5 were left un-run: each config takes ~24 min
-   because `data_ssl` re-reads all 25k features per epoch, and dev is saturated near 0, so LR
-   was the informative axis. Ran as two 2 h jobs, 267+268, both hitting the cap — the sweep
-   was made resumable via a per-config `result.json` skip-guard.)
+   **Read:** robust for lr ≤ 3e-3 (dev EER ~0.03–0.04%). **lr=1e-4 and 3e-4 tie for
+   best** (0.033% / 0.00027 on both metrics) — a small consistent gain over the 1e-3
+   default; dev's resolution can't separate the two.
+   † lr=1e-2 is already past the stability edge, not just "30× worse": training collapsed
+   after epoch 3 (val-accuracy 0.99 → ~0.10–0.20, oscillating between the all-spoof and
+   all-bonafide poles — `ssl_hp_lr1e2/history.csv`); the 1.338% is the epoch-2 best
+   checkpoint restored by early stopping, not a stable operating point.
+   ‡ At **lr=1e-1 training diverges immediately** — loss spikes to 9.11 at epoch 0 and
+   val-accuracy flips between the class poles (0.10 / 0.90) in the 2 epochs recorded
+   before the job hit the 2 h cap; it never reached scoring, so **no EER exists** (the
+   figure marks it at the 50% chance line). That is the **deliberate failed run**
+   (`ssl_hp_lr1e1_FAIL/history.csv`). Figure: `reports/figures/ssl_lr_sweep.png`.
+   (Architecture variants proj=128 / dropout=0.5 were left un-run — confirmed never
+   started on the server. Completed configs took ~21–32 min each: early stopping ends
+   them at 15–24 epochs and `data_ssl` re-reads all 25k features per epoch; dev is
+   saturated near 0, so LR was the informative axis. Ran as two 2 h jobs, 267+268, both
+   hitting the cap — the sweep resumes via a per-config `result.json` skip-guard, and
+   `*_FAIL` configs are skipped once their `history.csv` exists so a resume cannot
+   overwrite the divergence evidence.)
 
 ### B.5 Innovation — cross-generator test *(scaffold; needs creation half)*
 Score the trained detector on our **own** XTTS / Keras-TTS clips — an unseen, 2025-era

@@ -70,7 +70,9 @@ def main() -> None:
     result = {"dev_eer_pct": round(eer * 100, 3), "threshold": thr,
               "n_train": len(train_e), "feat_dim": d,
               "lr": args.lr, "proj": args.proj, "dropout": args.dropout,
-              "epochs": args.epochs, "batch_size": args.batch_size}
+              "epochs": args.epochs,  # requested cap; early stopping may end sooner
+              "epochs_run": len(history.history["loss"]),
+              "batch_size": args.batch_size}
     if args.asv_scores:
         result["min_tdcf"] = round(min_tdcf(scores[labels == 1], scores[labels == 0], args.asv_scores), 5)
     with open(os.path.join(args.out, "result.json"), "w", encoding="utf-8") as fh:
