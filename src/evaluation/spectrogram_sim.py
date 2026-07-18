@@ -13,15 +13,43 @@ from src.common.audio import TARGET_SR, load_wav
 _MCD_K = 10.0 / np.log(10.0) * np.sqrt(2.0)  # standard MCD constant
 
 
-def _mfcc(wav: np.ndarray, sr: int, n_mfcc: int = 25) -> np.ndarray:
-    import librosa
+def _mfcc(wav: np.ndarray, sr: int, n_mfcc: int = 13, n_mels: int = 40,
+          fmin: float = 80.0, fmax: float = 7600.0, top_db: float = 35.0) -> np.ndarray:
+    """Mel-cepstral coefficients for MCD, with two corrections over librosa's default.
 
-    m = librosa.feature.mfcc(y=wav, sr=sr, n_mfcc=n_mfcc, n_fft=512, hop_length=160)
-    return m[1:]  # drop the 0th (energy) coefficient, MCD convention -> (n_mfcc-1, T)
+    1. **Natural log, not dB.** `librosa.feature.mfcc` runs `power_to_db` (10*log10)
+       first, but the MCD constant 10/ln(10)*sqrt(2) already assumes natural-log
+       cepstra — using librosa's output applies the scaling twice.
+    2. **Silence frames are dropped.** log of a near-zero mel bin is hugely negative
+       and swings wildly with any noise, so silent frames dominated the average.
+
+    Returns (n_mfcc-1, T_voiced); the 0th (energy) coefficient is dropped per MCD
+    convention.
+    """
+    import librosa
+    import scipy.fftpack
+
+    mel = librosa.feature.melspectrogram(y=wav, sr=sr, n_fft=1024, hop_length=256,
+                                         n_mels=n_mels, fmin=fmin, fmax=fmax)
+    voiced = librosa.power_to_db(mel, ref=np.max).max(axis=0) > -top_db
+    logmel = np.log(np.maximum(mel, 1e-8))              # natural log
+    c = scipy.fftpack.dct(logmel, axis=0, type=2, norm="ortho")[1:n_mfcc]
+    return c[:, voiced] if voiced.sum() > 5 else c
 
 
 def mcd(ref_wav: np.ndarray, syn_wav: np.ndarray, sr: int = TARGET_SR) -> float:
-    """DTW-aligned mel-cepstral distortion (dB) between reference and synthesized audio."""
+    """DTW-aligned mel-cepstral distortion between reference and synthesized audio.
+
+    IMPORTANT — the absolute scale is **not** comparable to published MCD figures
+    (which are typically 4-8 dB for good TTS). Those use MGC-based mel-cepstral
+    analysis (pysptk/SPTK, alpha warping); this is a DCT of the log-mel spectrum,
+    which lands roughly an order of magnitude higher. Use it to RANK systems on
+    parallel utterances, not as an absolute quality figure.
+
+    Sanity-checked: identical signals -> 0.00; same-text synthesis scores lower than
+    a different-text real recording of the same speaker (i.e. it tracks content, as
+    MCD should).
+    """
     import librosa
 
     ref, syn = _mfcc(ref_wav, sr), _mfcc(syn_wav, sr)
