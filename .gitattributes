@@ -1,6 +1,57 @@
-# Shell scripts run on the Linux GPU server — keep LF so the shebang isn't `#!/bin/bash\r`.
+# Normalize text to LF in the repo; check out native on Windows.
+* text=auto
+
+# --- MUST stay LF -----------------------------------------------------------
+# These run on the Linux GPU server — keep LF so the shebang isn't `#!/bin/bash\r`
+# ("bad interpreter: /bin/bash^M").
 *.sh    text eol=lf
 *.slurm text eol=lf
 *.py    text eol=lf
-# The assignment brief is binary (don't let git touch line endings / diff it).
+*.toml  text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.md    text eol=lf
+*.csv   text eol=lf
+*.txt   text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+.python-version text eol=lf
+
+# --- MUST stay CRLF ---------------------------------------------------------
+# tools/record.cmd is launched by double-click on Windows.
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+
+# --- Binary: never convert, never diff --------------------------------------
+# The assignment brief and any Office docs.
 *.odt   binary
+*.docx  binary
+*.pptx  binary
+*.pdf   binary
+# Audio — the target recording, the segmented clips, the generated demos.
+*.wav   binary
+*.flac  binary
+*.mp3   binary
+*.m4a   binary
+# Checkpoints / arrays.
+*.pth   binary
+*.pt    binary
+*.h5    binary
+*.keras binary
+*.npy   binary
+*.npz   binary
+*.safetensors binary
+# Figures.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+
+# --- Notebooks --------------------------------------------------------------
+# LF for stable cross-machine diffs; deliberately NOT binary, since reading the
+# JSON diff is often the only way to see what actually changed in a notebook.
+*.ipynb text eol=lf
+
+# --- Language stats ---------------------------------------------------------
+uv.lock    linguist-generated
+docs/*.odt linguist-documentation
