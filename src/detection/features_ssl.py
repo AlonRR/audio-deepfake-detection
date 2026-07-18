@@ -104,18 +104,68 @@ def cache_subset(data_root, subset, out_dir, frontend, layer, max_frames, limit=
     return manifest
 
 
+def cache_folders(specs: list[tuple[int, str]], out_dir: str, frontend: str,
+                  layer: str | int, max_frames: int) -> str:
+    """Cache SSL features for arbitrary wav folders — used by the cross-generator test.
+
+    `specs` is [(label, folder), ...] with the ASVspoof convention: **1 = bona fide,
+    0 = spoof**. `cache_subset` cannot do this because it parses an ASVspoof protocol
+    file; our own clips have no protocol.
+
+    Frontend / layer / max_frames MUST match the values the back-end was trained with
+    (xls-r-300m, layer avg, 200 frames) or the cached features are not comparable.
+    """
+    import glob as _glob
+
+    os.makedirs(out_dir, exist_ok=True)
+    ext = SSLExtractor(frontend, layer)
+    manifest = os.path.join(out_dir, "manifest.jsonl")
+    n = 0
+    with open(manifest, "w", encoding="utf-8") as mf:
+        for label, folder in specs:
+            wavs = sorted(_glob.glob(os.path.join(folder, "*.wav")))
+            tag = os.path.basename(folder.rstrip("/\\")) or "root"
+            for w in wavs:
+                utt = f"{tag}__{os.path.splitext(os.path.basename(w))[0]}"
+                npy = os.path.join(out_dir, f"{utt}.npy")
+                if not os.path.exists(npy):
+                    try:
+                        np.save(npy, _fix_frames(ext.extract(load_wav(w, TARGET_SR)), max_frames))
+                    except Exception as exc:                      # noqa: BLE001
+                        print(f"[ssl] skip {w}: {exc}")
+                        continue
+                mf.write(json.dumps({"npy": npy, "label": int(label), "src": w}) + "\n")
+                n += 1
+            print(f"[ssl] {folder}: {len(wavs)} wavs (label={label})")
+    print(f"[ssl] wrote manifest -> {manifest}  ({n} entries)")
+    return manifest
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Cache frozen SSL features for ASVspoof LA.")
-    ap.add_argument("--data-root", required=True)
-    ap.add_argument("--subset", choices=["train", "dev", "eval"], required=True)
+    ap.add_argument("--data-root")
+    ap.add_argument("--subset", choices=["train", "dev", "eval"])
     ap.add_argument("--out", required=True)
     ap.add_argument("--frontend", default=DEFAULT_FRONTEND)
     ap.add_argument("--layer", default="avg", help='"avg" or an int layer index')
     ap.add_argument("--max-frames", type=int, default=200)
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--wav-dirs", nargs="+", metavar="LABEL:DIR",
+                    help="cross-test mode: folders of own clips, e.g. 1:data/raw/heldout "
+                         "0:data/generated/xtts_ft  (1 = bona fide, 0 = spoof)")
     args = ap.parse_args()
-    cache_subset(args.data_root, args.subset, args.out, args.frontend, args.layer,
-                 args.max_frames, args.limit)
+
+    if args.wav_dirs:
+        specs = []
+        for spec in args.wav_dirs:
+            label, _, folder = spec.partition(":")
+            specs.append((int(label), folder))
+        cache_folders(specs, args.out, args.frontend, args.layer, args.max_frames)
+    else:
+        if not (args.data_root and args.subset):
+            raise SystemExit("--data-root and --subset are required unless --wav-dirs is used")
+        cache_subset(args.data_root, args.subset, args.out, args.frontend, args.layer,
+                     args.max_frames, args.limit)
 
 
 if __name__ == "__main__":
