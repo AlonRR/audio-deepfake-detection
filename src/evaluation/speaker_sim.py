@@ -1,4 +1,4 @@
-"""Speaker-embedding cosine similarity (required creation metric #3).
+"""Speaker-embedding cosine similarity (one of the metrics the brief suggests).
 
 Uses SpeechBrain's ECAPA-TDNN (arXiv:2005.07143), the same "embedding" idea as
 word embedding.pptx applied to voice. Runs in the PyTorch container. The cosine helper is

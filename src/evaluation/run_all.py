@@ -2,8 +2,8 @@
 
     python -m src.evaluation.run_all --out reports/evaluation
 
-Covers the three metrics the brief mandates, each scored the way it is actually
-valid:
+Covers the metrics the brief suggests (it says "metrics such as", so they are
+examples, not a fixed requirement), each scored the way it is actually valid:
 
 * **Spectrogram similarity (MCD, log-mel L2/SSIM)** - needs PARALLEL utterances,
   i.e. the same words on both sides. Scored on clips synthesized from the four

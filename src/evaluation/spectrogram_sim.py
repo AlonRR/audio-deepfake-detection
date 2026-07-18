@@ -1,4 +1,4 @@
-"""Spectrogram-similarity metric (required creation metric #2).
+"""Spectrogram-similarity metric (one of the metrics the brief suggests).
 
 MCD (mel-cepstral distortion) is the headline number; log-mel L2 and a light SSIM are
 supporting evidence. Pure numpy + librosa (no TensorFlow/torch), so it runs anywhere and

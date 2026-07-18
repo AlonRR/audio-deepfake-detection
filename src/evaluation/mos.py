@@ -1,4 +1,8 @@
-"""MOS (Mean Opinion Score) harness (required creation metric #1).
+"""MOS (Mean Opinion Score) harness.
+
+The brief lists MOS under "metrics such as", i.e. a suggested metric, not a required
+one. It is the only PERCEPTUAL measure available, so it is worth having - but the
+objective metrics stand on their own if no listening panel is run.
 
 MOS is a human judgement (naturalness, 1-5); this module only prepares the blind test and
 aggregates the collected ratings — it never fabricates scores. An optional automatic-MOS
