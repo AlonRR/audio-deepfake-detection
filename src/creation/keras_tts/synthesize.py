@@ -62,8 +62,18 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Synthesize clips with the Keras TTS baseline.")
     ap.add_argument("--weights", required=True)
     ap.add_argument("--out", default="data/generated/keras_tts")
+    # Parallel mode: synthesize the HELD-OUT transcripts instead of PROMPTS, so
+    # MCD / log-mel SSIM can compare identical spoken content against the real
+    # held-out audio. Output files are named by clip id to make pairing trivial.
+    ap.add_argument("--texts-csv", help="LJSpeech metadata to speak instead of PROMPTS")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
+
+    if args.texts_csv:
+        from src.common.metadata import load_texts
+        items = load_texts(args.texts_csv)
+    else:
+        items = [(f"kerastts_{i:02d}", t) for i, t in enumerate(PROMPTS)]
 
     model = build_model()
     # build variables with one dummy call, then load weights
@@ -71,12 +81,12 @@ def main() -> None:
     _ = model((tf.zeros((1, 5), tf.int32), tf.zeros((1, 4, model.n_mels))), training=False)
     model.load_weights(args.weights)
 
-    for i, text in enumerate(PROMPTS):
+    for i, (name, text) in enumerate(items):
         mel = synthesize_one(model, text)
         wav = mel_to_wav(mel, CFG)
-        save_wav(os.path.join(args.out, f"kerastts_{i:02d}.wav"), wav, CFG.sr)
-        print(f"[{i:02d}] {text[:40]!r} -> {mel.shape[0]} frames")
-    print(f"wrote {len(PROMPTS)} clips -> {args.out}")
+        save_wav(os.path.join(args.out, f"{name}.wav"), wav, CFG.sr)
+        print(f"[{i:02d}] {name} {text[:40]!r} -> {mel.shape[0]} frames")
+    print(f"wrote {len(items)} clips -> {args.out}")
 
 
 if __name__ == "__main__":

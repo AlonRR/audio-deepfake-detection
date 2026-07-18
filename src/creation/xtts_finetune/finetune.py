@@ -20,7 +20,10 @@ def run(data_root: str, out_dir: str, epochs: int, batch_size: int, lr: float) -
     from TTS.config.shared_configs import BaseDatasetConfig
     from TTS.tts.datasets import load_tts_samples
     from TTS.tts.layers.xtts.trainer.gpt_trainer import (
-        GPTArgs, GPTTrainer, GPTTrainerConfig, XttsAudioConfig)
+        GPTArgs, GPTTrainer, GPTTrainerConfig)
+    # coqui-tts 0.27.x defines XttsAudioConfig in TTS.tts.models.xtts; older
+    # versions re-exported it from gpt_trainer, which is where this used to import it.
+    from TTS.tts.models.xtts import XttsAudioConfig
     from TTS.utils.manage import ModelManager
 
     os.makedirs(out_dir, exist_ok=True)

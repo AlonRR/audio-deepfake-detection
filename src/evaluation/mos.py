@@ -14,38 +14,73 @@ import os
 import numpy as np
 
 
-def build_test(clips: dict[str, list[str]], out_csv: str, seed: int = 0) -> None:
-    """Write a shuffled, blinded rating sheet.
+def build_test(clips: dict[str, list[str]], out_dir: str, seed: int = 0) -> None:
+    """Build a genuinely blind listening test.
 
-    ``clips`` maps system name (e.g. "real", "keras_tts", "xtts") -> list of wav paths.
-    Output CSV columns: token, path, system(hidden key), rating(blank for the listener).
+    ``clips`` maps system name (e.g. "real", "keras_tts", "xtts_ft") -> wav paths.
+
+    Writes THREE things, and the separation is the point:
+      <out_dir>/audio/<token>.wav   clips copied under opaque token names, so the
+                                    filename cannot leak the system;
+      <out_dir>/mos_sheet.csv       token,rating - the ONLY file a listener sees;
+      <out_dir>/mos_key.csv         token,path,system - the hidden key, kept back
+                                    until ratings are collected.
+
+    The earlier version put the `system` column in the listener's own sheet and
+    kept source filenames, so a rater could see they were scoring "xtts_00.wav".
+    That is not a blind test and the resulting MOS would not be defensible.
     """
+    import shutil
+
     rows = []
     for system, paths in clips.items():
         for p in paths:
             rows.append({"path": p, "system": system})
     rng = np.random.default_rng(seed)
     rng.shuffle(rows)
+
+    audio_dir = os.path.join(out_dir, "audio")
+    os.makedirs(audio_dir, exist_ok=True)
     for i, r in enumerate(rows):
         r["token"] = f"clip_{i:03d}"
-        r["rating"] = ""
-    os.makedirs(os.path.dirname(out_csv) or ".", exist_ok=True)
-    with open(out_csv, "w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=["token", "path", "system", "rating"])
+        shutil.copyfile(r["path"], os.path.join(audio_dir, f"{r['token']}.wav"))
+
+    sheet = os.path.join(out_dir, "mos_sheet.csv")
+    with open(sheet, "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=["token", "rating"])
         w.writeheader()
-        w.writerows(rows)
-    print(f"wrote {len(rows)} blinded clips -> {out_csv}  (listeners fill the 'rating' column 1-5)")
+        w.writerows([{"token": r["token"], "rating": ""} for r in rows])
+
+    key = os.path.join(out_dir, "mos_key.csv")
+    with open(key, "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=["token", "path", "system"])
+        w.writeheader()
+        w.writerows([{k: r[k] for k in ("token", "path", "system")} for r in rows])
+
+    n_sys = len(clips)
+    print(f"blind MOS test -> {out_dir}")
+    print(f"  audio/      {len(rows)} clips from {n_sys} systems, token-named")
+    print(f"  mos_sheet.csv  give THIS to listeners (rate each token 1-5)")
+    print(f"  mos_key.csv    keep hidden until ratings are in")
 
 
-def aggregate(rating_csvs: list[str]) -> dict:
-    """Aggregate one-or-more filled rating sheets into per-system mean MOS + 95% CI."""
+def aggregate(rating_csvs: list[str], key_csv: str) -> dict:
+    """Join filled sheets against the hidden key -> per-system mean MOS + 95% CI."""
+    key: dict[str, str] = {}
+    with open(key_csv, newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            key[row["token"]] = row["system"]
+
     by_system: dict[str, list[float]] = {}
     for path in rating_csvs:
         with open(path, newline="", encoding="utf-8") as fh:
             for row in csv.DictReader(fh):
                 if not row.get("rating"):
                     continue
-                by_system.setdefault(row["system"], []).append(float(row["rating"]))
+                system = key.get(row["token"])
+                if system is None:
+                    continue
+                by_system.setdefault(system, []).append(float(row["rating"]))
     out = {}
     for system, vals in by_system.items():
         a = np.asarray(vals)

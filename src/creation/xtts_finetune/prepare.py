@@ -135,9 +135,16 @@ def segment(source: str, out: str, model_size: str = "small",
 
 
 def _write(path: str, rows: list[tuple[str, str, float]]) -> None:
+    """Write LJSpeech format: id|transcription|normalized_transcription.
+
+    Coqui's `ljspeech` formatter requires all THREE columns and raises IndexError
+    on two. Our transcripts are already in spoken form (see transcript_fixes.json),
+    so the raw and normalized columns are identical. The Keras baseline reads
+    parts[0]/parts[1], so the extra column is harmless there.
+    """
     with open(path, "w", encoding="utf-8") as fh:
         for cid, text, _dur in rows:
-            fh.write(f"{cid}|{text}\n")
+            fh.write(f"{cid}|{text}|{text}\n")
 
 
 def _device() -> str:
