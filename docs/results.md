@@ -137,6 +137,26 @@ faster-whisper (`small`, VAD) in `src/creation/xtts_finetune/prepare.py`:
   repeated audio with correct matching text — valid training pairs, not transcription
   loops.
 
+**Train / eval split — 30 train · 4 held out** (`--holdout 4`):
+
+`metadata.csv` (train) · `metadata_eval.csv` (held out) · `metadata_all.csv`. The
+trainers read `metadata.csv`, so the held-out clips are excluded *by construction* —
+they cannot be trained on by accident.
+
+The holdout gives speaker-cosine a **real-vs-real ceiling** and MOS a **real anchor**
+drawn from audio the model never saw; scoring those against training audio would
+flatter both metrics. Selection is constrained three ways:
+
+| Constraint | Why |
+|---|---|
+| No phrase shared with a neighbour | The re-reads mean adjacent clips can be near-duplicates. Holding out one half while its twin trains would leak the eval audio into the model. |
+| ≥ 4 s of speech | ECAPA embeddings are unstable on very short clips, and two words cannot be MOS-rated. (The first pass picked the 1.8 s `"stone chimney."` — hence the floor.) |
+| Spread across the recording | Keeps all script sections represented instead of sampling one region. |
+
+Held out: `clip_0004` (6.6 s, narration) · `clip_0013` (7.4 s, expressive) ·
+`clip_0019` (12.2 s, numbers/names) · `clip_0030` (6.5 s, phonetic). **Verified: no
+5-gram of any held-out transcript occurs anywhere in the training set.**
+
 - Systems: **A1** from-scratch Keras Tacotron2-lite (weak baseline, Griffin-Lim) · **A2**
   fine-tuned **XTTS-v2** (Coqui). Synthesize **≥10 clips** of varying length/complexity.
 
