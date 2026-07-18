@@ -350,7 +350,7 @@ function encodeWAV(samples, rate) {
 // ---- save ------------------------------------------------------------------
 $('save').onclick = async () => {
   if (!window.__wav) return;
-  const name = 'target_voice.wav';
+  const name = 'source.wav';   // matches docs/server_runbook.md § 7
 
   if (window.showSaveFilePicker) {
     try {

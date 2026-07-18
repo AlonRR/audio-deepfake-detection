@@ -1,0 +1,17 @@
+{
+  "_comment": [
+    "Whisper writes numerals ($89.50, 2026, 1145) but the speaker said words.",
+    "For a character-level TTS that is a text-audio mismatch, so we rewrite the",
+    "transcript into the spoken form actually uttered. Matched by substring, not by",
+    "clip id, so the map survives re-segmentation with different --min-s/--max-s.",
+    "Applied by src/creation/xtts_finetune/prepare.py."
+  ],
+  "fixes": {
+    "March 3rd, 2026 at a quarter past nine": "March third, twenty twenty-six, at a quarter past nine",
+    "We ordered 14 chairs, 27": "We ordered fourteen chairs, twenty-seven",
+    "roughly 100 paper cups": "roughly one hundred paper cups",
+    "platform 6": "platform six",
+    "arrives at 1145": "arrives at eleven forty-five",
+    "$89.50": "eighty-nine dollars and fifty cents"
+  }
+}
