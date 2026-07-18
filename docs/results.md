@@ -98,14 +98,45 @@ operating point. Tool ready: `src/detection/cross_test.py`. _Results TBD._
 
 ---
 
-## Part A — Creation *(scaffold — waiting on the target-voice recording)*
+## Part A — Creation *(dataset ready — training pending)*
 
-> Blocked only on the 1–5 min voice recording (`data/raw/reading_script.txt`). Once
-> provided, the XTTS fine-tune (checkpoint/resume across the 2 h QOS cap) and the Keras
-> Tacotron2-lite baseline run, then the evaluation harness fills the tables below.
+> The target-voice recording is **in hand** and segmented. Next: the XTTS fine-tune
+> (checkpoint/resume across the 2 h QOS cap) and the Keras Tacotron2-lite baseline,
+> then the evaluation harness fills the tables below.
 
-### A.1 Setup *(planned)*
-- Target voice: student's own, 1–5 min → faster-whisper segmentation → LJSpeech-style set.
+### A.1 Setup *(done)*
+
+**Source recording** — `data/raw/source.wav`, read from `data/raw/reading_script.txt`
+via the browser recorder in `tools/` (raw capture: browser AGC / noise-suppression /
+echo-cancellation disabled, since they smear the spectral detail cloning depends on).
+
+| | |
+|---|---|
+| Format | 48 kHz · 16-bit · mono |
+| Duration | 4:36 (276 s) |
+| Peak / clipped samples | −0.7 dBFS / **0** |
+| Noise floor | −69.4 dBFS |
+| Estimated SNR | **40.8 dB** |
+| Speech / silence | 68.5% / 31.5% |
+
+**Segmented dataset** — `data/raw/{metadata.csv,wavs/}`, LJSpeech-style, via
+faster-whisper (`small`, VAD) in `src/creation/xtts_finetune/prepare.py`:
+
+- **34 clips · 4.27 min** of speech at 22.05 kHz; 1.8 / 7.4 / 12.2 s (min/median/max);
+  577 words.
+- Segment window widened to **1.5–13.0 s**. The original 2.0–12.0 s window dropped two
+  boundary segments (13.9 s), one of them the numbers-and-proper-nouns line the script
+  includes specifically for phonetic coverage.
+- **Spoken-form transcript fixes** (`data/raw/transcript_fixes.json`, 6 applied):
+  Whisper emits numerals for spoken numbers (`$89.50`, `1145`, `2026`), which misaligns
+  text and audio for the *character-level* A1 baseline. A2/XTTS normalizes internally
+  and is largely immune; the fix protects A1 from a confound that would otherwise be
+  mistaken for attention failure.
+- Three clips contain genuine **re-reads** (the speaker restarting a sentence).
+  Verified against Whisper segment timings as non-overlapping in time, i.e. real
+  repeated audio with correct matching text — valid training pairs, not transcription
+  loops.
+
 - Systems: **A1** from-scratch Keras Tacotron2-lite (weak baseline, Griffin-Lim) · **A2**
   fine-tuned **XTTS-v2** (Coqui). Synthesize **≥10 clips** of varying length/complexity.
 
