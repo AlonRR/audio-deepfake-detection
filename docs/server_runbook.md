@@ -1,16 +1,22 @@
-# Server runbook — training on the Shenkar Lab (NVIDIA L4)
+# Server runbook — training on the university GPU lab (NVIDIA L4)
 
 How to launch the **detection baseline** training on the lab GPU. You drive your own
 JupyterHub session (your account / one-time first login); this repo gives you the code +
 exact commands. Paste the output back and I'll debug.
+
+> Host names, account names and VPN profiles are intentionally left as placeholders
+> (`$LAB_HOST`, `$LAB_USER`) — this repo is public, and internal infrastructure names
+> do not belong in it. Substitute your own from the lab's connection instructions.
 
 > Status of the code: modules syntax-compile and the EER math is unit-tested, but the
 > TensorFlow training path has **not** run against real data/GPU yet — expect the first
 > run to surface a fix or two. That's the point of the smoke run in step 4.
 
 ## 1. Connect
-1. Bring up the **WireGuard** tunnel (import `credentials_server/<LAB_USER>.conf`, Activate).
-2. Open **https://$LAB_HOST** → accept the cert warning → log in; **change the
+1. Bring up the **WireGuard** tunnel (import your `<LAB_USER>.conf` profile, Activate).
+   Keep that file and any one-time password **out of this repo** — `.gitignore` blocks
+   `*.conf` / `*credential*` for exactly this reason.
+2. Open **`https://$LAB_HOST`** → accept the cert warning → log in; **change the
    one-time password** on first login.
 3. Open **JupyterHub**: `https://$LAB_HOST/jupyter/hub/login`. Launch a session,
    then open a **Terminal**.
