@@ -2,7 +2,9 @@
 
 MCD (mel-cepstral distortion) is the headline number; log-mel L2 and a light SSIM are
 supporting evidence. Pure numpy + librosa (no TensorFlow/torch), so it runs anywhere and
-the core math is unit-tested (identical signals -> MCD 0, SSIM 1).
+the core math is unit-tested in tests/test_metrics.py (identical signals -> MCD 0.00
+and correlation 1.00; a same-text pair scores below a different-text pair from the same
+speaker; and the correlation implementation is pinned to Pearson r, guarding the rename).
 """
 from __future__ import annotations
 
