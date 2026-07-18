@@ -200,6 +200,51 @@ selected epoch 9 (`best_model_81.pth`). Two honest observations:
   that it converged almost immediately. The zero-shot-vs-fine-tuned comparison
   in A.2 is what settles whether that loss drop is audible.
 
+### A.1d A1 Keras Tacotron2-lite *(done — job 512, 1 h 07 m, 300 epochs)*
+
+Train loss fell 0.167 → 0.113. **The model still failed completely**, in a specific and
+diagnosable way — which is what this baseline exists to demonstrate.
+
+| Symptom | Evidence |
+|---|---|
+| **Stop token never learned** | All 12 clips are **9.28 s** — exactly the `max_steps=800` cap — whether the prompt is 1 word (`"hello."`) or 13. Duration **std = 0.00 s**; real speech is 2.35 s. |
+| **Output is independent of the text** | Same corollary: nothing about the input changes the output length. Attention never aligned, so the decoder is not conditioned on the text at all. |
+| **Bimodal collapse** | 6/12 clips near-silent (rms ≤ 0.008, peak ≤ 0.13); the other 6 saturate (peak = 1.000). |
+| **Not speech** | Mean ZCR **0.241** vs **0.154** for real speech — noise-like, not voiced. |
+
+**Why:** 30 clips / ~4 min cannot train a seq2seq TTS from scratch. Two failures compound —
+attention never converges to a monotonic text↔mel alignment (`attention.pptx`), and the
+stop token is a *single positive example per sequence*, far too rare a signal to learn from
+30 sequences. Griffin-Lim then adds phase artifacts on top of an already-broken mel.
+
+This is the intended contrast with A2, not a bug to fix. Fixing it would need
+orders-of-magnitude more data — i.e. it would stop being the "from scratch on your own
+voice" baseline the assignment asks to compare against.
+
+### A.1e Preliminary signal-level comparison *(crude proxies — not the mandated metrics)*
+
+| System | n | dur mean | dur std | rms | ZCR | peak |
+|---|---|---|---|---|---|---|
+| **real (held-out)** | 4 | 8.14 s | 2.35 | 0.054 | **0.154** | 0.531 |
+| A1 keras_tts | 12 | 9.28 s | **0.00** | 0.027 | 0.241 | 0.452 |
+| A2 XTTS zero-shot | 12 | 3.65 s | 1.43 | 0.126 | 0.084 | **1.000** |
+| A2 XTTS fine-tuned | 12 | 4.55 s | 1.18 | 0.037 | **0.150** | 0.368 |
+
+Read with care — ZCR and RMS are cheap proxies, not perceptual measures; MCD / SSIM /
+speaker-cosine in A.2 are authoritative. But two things already stand out:
+
+1. **A1's zero duration variance** is the cleanest single number showing the baseline
+   ignores its input entirely.
+2. **Fine-tuning moved XTTS toward the real speaker**: ZCR 0.084 → **0.150** against a real
+   0.154, and peak 1.000 → 0.368 against a real 0.531. That is preliminary evidence the
+   −8.9% eval-loss drop in A.1c produced an audible change rather than a numerical one —
+   the question A.1c explicitly left open.
+
+> **Caveat that matters for the cross-generator test:** A1's clips are noise, so *any*
+> detector will flag them trivially. The meaningful cross-generator signal comes from the
+> **A2** clips, which are real speech from a 2025-era synthesizer. A1's detection rate
+> should not be read as evidence the detector generalizes.
+
 ### A.2 Quality metrics *(tables to fill)*
 | Metric | Real (ref) | A1 Keras-TTS | A2 XTTS-v2 |
 |---|---|---|---|
