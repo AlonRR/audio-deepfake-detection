@@ -121,7 +121,7 @@ complexity", per the brief) → `data/generated/`.
 | Metric | How | Compares |
 |---|---|---|
 | **MOS** (naturalness, 1–5) | small human listening panel via a form; ≥10 raters where possible | real vs A1 vs A2 |
-| **Spectrogram similarity** | **MCD** (mel-cepstral distortion) + log-mel L2/SSIM (`librosa`) | cloned vs real reference |
+| **Spectrogram similarity** | **MCD** (mel-cepstral distortion) + log-mel L2/correlation (`librosa`) | cloned vs real reference |
 | **Speaker-embedding cosine** | **ECAPA-TDNN** (SpeechBrain) embeddings, cosine similarity | cloned vs real speaker |
 
 *(Optional, clearly flagged as outside course materials: an automatic MOS predictor

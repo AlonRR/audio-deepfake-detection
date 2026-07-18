@@ -29,8 +29,12 @@ def _mfcc(wav: np.ndarray, sr: int, n_mfcc: int = 13, n_mels: int = 40,
     import librosa
     import scipy.fftpack
 
+    # power=1.0 -> AMPLITUDE mel. librosa defaults to power=2.0, which makes np.log(mel)
+    # equal 2*ln(amplitude) and doubles every cepstral coefficient; the MCD constant
+    # 10/ln(10)*sqrt(2) already assumes log-amplitude cepstra, so power=2.0 inflated MCD
+    # by exactly 2x (measured ratio 2.013).
     mel = librosa.feature.melspectrogram(y=wav, sr=sr, n_fft=1024, hop_length=256,
-                                         n_mels=n_mels, fmin=fmin, fmax=fmax)
+                                         n_mels=n_mels, fmin=fmin, fmax=fmax, power=1.0)
     voiced = librosa.power_to_db(mel, ref=np.max).max(axis=0) > -top_db
     logmel = np.log(np.maximum(mel, 1e-8))              # natural log
     c = scipy.fftpack.dct(logmel, axis=0, type=2, norm="ortho")[1:n_mfcc]
@@ -59,7 +63,11 @@ def mcd(ref_wav: np.ndarray, syn_wav: np.ndarray, sr: int = TARGET_SR) -> float:
 
 
 def logmel_l2(ref_wav: np.ndarray, syn_wav: np.ndarray, sr: int = TARGET_SR) -> float:
-    """Frame-wise L2 between log-mel spectrograms (length-matched by cropping)."""
+    """Frame-wise L2 between log-mel spectrograms.
+
+    Length-matched by CROPPING, not DTW - so this is partly a duration/onset-agreement
+    measure, not purely spectral distance. See ``mcd`` for the DTW-aligned metric.
+    """
     import librosa
 
     def lm(w):
@@ -72,8 +80,19 @@ def logmel_l2(ref_wav: np.ndarray, syn_wav: np.ndarray, sr: int = TARGET_SR) -> 
     return float(np.sqrt(np.mean((a[:, :t] - b[:, :t]) ** 2)))
 
 
-def logmel_ssim(ref_wav: np.ndarray, syn_wav: np.ndarray, sr: int = TARGET_SR) -> float:
-    """Global SSIM between the two log-mel "images" (crop to common length)."""
+def logmel_corr(ref_wav: np.ndarray, syn_wav: np.ndarray, sr: int = TARGET_SR) -> float:
+    """Global **Pearson correlation** between the two log-mel "images".
+
+    NOT SSIM, despite the SSIM-shaped formula below. Each spectrogram is z-normalised
+    first, so the luminance term collapses to 1 and the contrast/structure term reduces
+    to the correlation coefficient - verified to match ``np.corrcoef`` to ~4e-4. It is
+    also single-window (no local Gaussian windows). Renamed from ``logmel_ssim`` so the
+    reported column says what it measures.
+
+    Alignment caveat: like ``logmel_l2`` this crops to the shorter length rather than
+    DTW-aligning, so it is partly sensitive to duration/onset mismatch (a 2-frame shift
+    of an identical clip scores 0.894, not 1.000). ``mcd`` is the DTW-aligned metric.
+    """
     import librosa
 
     def lm(w):
@@ -95,9 +114,9 @@ def logmel_ssim(ref_wav: np.ndarray, syn_wav: np.ndarray, sr: int = TARGET_SR) -
 
 def score_pairs(pairs, sr: int = TARGET_SR) -> dict:
     """Aggregate metrics over (ref_path, syn_path) pairs -> mean MCD / L2 / SSIM."""
-    mcds, l2s, ssims = [], [], []
+    mcds, l2s, corrs = [], [], []
     for ref_path, syn_path in pairs:
         r, s = load_wav(ref_path, sr), load_wav(syn_path, sr)
-        mcds.append(mcd(r, s, sr)); l2s.append(logmel_l2(r, s, sr)); ssims.append(logmel_ssim(r, s, sr))
+        mcds.append(mcd(r, s, sr)); l2s.append(logmel_l2(r, s, sr)); corrs.append(logmel_corr(r, s, sr))
     return {"mcd_mean": float(np.mean(mcds)), "logmel_l2_mean": float(np.mean(l2s)),
-            "ssim_mean": float(np.mean(ssims)), "n": len(mcds)}
+            "logmel_corr_mean": float(np.mean(corrs)), "n": len(mcds)}

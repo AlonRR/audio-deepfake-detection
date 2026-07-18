@@ -50,7 +50,10 @@ def score(real_paths, cloned_paths) -> dict:
     real = [embed(p) for p in real_paths]
     centroid = np.mean(real, axis=0)
     cloned_cos = [cosine(embed(p), centroid) for p in cloned_paths]
-    real_cos = [cosine(e, centroid) for e in real]  # upper-bound reference
+    # Leave-one-out: correlating each real embedding with a centroid it helps form
+    # (n=4, so 25% of it) biases the "ceiling" upward. Exclude self.
+    real_cos = [cosine(e, np.mean([x for j, x in enumerate(real) if j != i], axis=0))
+                for i, e in enumerate(real)]
     return {"cloned_cosine_mean": float(np.mean(cloned_cos)),
             "cloned_cosine_std": float(np.std(cloned_cos)),
             "real_vs_centroid_mean": float(np.mean(real_cos)),

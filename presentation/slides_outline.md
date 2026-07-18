@@ -22,13 +22,15 @@ Numbers: `docs/results.md`; figures: `reports/figures/`.
    4 min (`ML4.pptx` RNN, `attention.pptx`) → A2 XTTS-v2 fine-tune (Transformer +
    speaker embedding + HiFi-GAN vocoder; `word embedding.pptx`, `L18_gan__slides.pdf`).
 7. **Creation results** *(filled)* — headline: **every metric orders A1 ≪ zero-shot <
-   fine-tuned**; speaker cosine **0.449** vs a real-vs-real ceiling of **0.915**; SSIM
+   fine-tuned**; speaker cosine **0.449** vs a real-vs-real ceiling of **0.848**; SSIM
    doubled 0.092 → 0.180 with fine-tuning. A1 cosine **−0.020** = not a clone at all.
    XTTS loss curve 3.825 → 3.485, best epoch 9 (epoch 10 rises → early stop).
 8. **Innovation — cross-test** *(filled)* — **both detectors collapse**: SSL 0.67% →
    **29.17%** EER, CNN 18.55% → **70.83%** (worse than chance). The decisive number:
-   the SSL detector scores my **real** held-out speech at **0.0009** bona-fide. Channel
-   shift, not generator novelty.
+   the SSL detector scores my **real** held-out speech at **0.0009** bona-fide. Most
+   consistent with channel shift, not generator novelty. **State the caveat on the slide:
+   n=4 real clips — directional, and the experiment does not isolate channel from
+   generator.**
 9. **Demo** — `tools/webui` (run `tools/webui/run.cmd`): type text → cloned voice speaks
    it → "Send to detector". **Record your own real voice live and let it be flagged
    SYNTHETIC** — that is §B.5 demonstrating itself. Say it *before* it happens.
@@ -42,7 +44,7 @@ Numbers: `docs/results.md`; figures: `reports/figures/`.
 ## Key figures
 - **Ready:** `eer_tdcf_comparison.png`, `det_eval_overlay.png`, `det_dev_overlay.png`,
   per-run learning curves, `base_cnn_lfcc_sub_*` (the 0% artifact).
-- **Numbers ready, plots optional:** XTTS loss curve (§A.1c table), MCD/SSIM/cosine
+- **Numbers ready, plots optional:** XTTS loss curve (§A.1c table), MCD/corr/cosine
   (§A.2 table), cross-test (§B.5 table). Worth plotting if time allows: A1-vs-A2
   mel-spectrograms and the A1 attention-alignment map — they make the collapse visible.
 - **Not available:** MOS bars (panel not yet run).
@@ -77,7 +79,8 @@ sweep's value was showing the back-end is *insensitive* to LR across two orders 
 magnitude, then breaking at 1e-2 and diverging at 1e-1.
 
 **Why did the 4k subset give 0% EER?** The subset's spoof half was effectively one attack
-type, trivially separable → the CNN overfit (train acc ~1.0, val ~0.76). It proved subset
+type, trivially separable → **both** train and val accuracy hit ~1.00 (final val 0.9998).
+That is not classic over-fitting; the subset simply carries no signal. It proved subset
 eval is deceptive and motivated full-data + unseen-eval evaluation.
 
 **Why does SSL generalize but the CNN doesn't?** dev shares attacks A01–A06 with train;
@@ -85,8 +88,14 @@ eval has unseen A07–A19. SSL barely degrades (0.04 → 0.67%) while the CNN dr
 (12.99 → 18.55%): the spectrogram CNN latches onto attack-specific artifacts; the
 self-supervised representation captures attack-agnostic speech cues.
 
-**Why LFCC > log-mel?** LFCC's linear filterbank keeps high-frequency detail where
-vocoder/synthesis artifacts concentrate; log-mel compresses the high end.
+**Why does your cepstral front-end beat log-mel?** Careful — I have to retract the answer
+I first wrote. I labelled it "LFCC" and explained it as a linear filterbank preserving
+high-frequency detail. On checking the code, `src/common/audio.py` builds an **HTK-mel**
+filterbank: a comment claimed mel spacing was replaced with linear, and it never was
+(measured peaks 31/312/719/1281/2031/3094/4594/6688 Hz — mel-spaced). So it is an
+**MFCC-60**, both arms are mel, and the real contrast is cepstral-plus-CMVN vs raw
+filterbank bins — not a frequency-scale effect. The 12.99% / 18.55% numbers are real;
+the name and the explanation were not. The true LFCC comparison remains un-run.
 
 **What is RawNet2?** End-to-end from raw waveform: learnable SincConv band-pass filters →
 residual blocks with filter-wise feature-map scaling → GRU → classifier. No hand-crafted
@@ -125,7 +134,7 @@ same-text synthesis (51.9) scores below a *different-text real recording of the 
 speaker* (77.2) — so it tracks content, as MCD should.
 
 **Why is speaker cosine only 0.449 — didn't the clone work?** It worked partially, and
-overstating that would be dishonest. Real-vs-real is **0.915**; the clone reaches 0.449 —
+overstating that would be dishonest. Real-vs-real is **0.848**; the clone reaches 0.449 —
 recognisably the right speaker to a listener, but clearly separable to an embedding model.
 Four minutes is simply not much data. The honest claim is "a convincing-sounding clone
 that does not fool a speaker-verification system," not "a clone that defeats ASV."

@@ -16,7 +16,7 @@ oral defense.
    fine-tuned, in `data/generated/`.
 3. **A1:** Keras Tacotron2-lite trained + synthesized; failure modes documented
    (this baseline is *meant* to underperform — that contrast is the deliverable).
-4. Evaluation harness run: MCD + log-mel SSIM, ECAPA speaker cosine, scored
+4. Evaluation harness run: MCD + log-mel correlation, ECAPA speaker cosine, scored
    against the 4 held-out clips in `metadata_eval.csv` (never against train audio).
 5. **MOS:** blind randomized rating sheet generated + aggregation script ready.
 6. Cross-generator test: trained detector scored on my own A1/A2 fakes; the

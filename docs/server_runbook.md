@@ -93,7 +93,7 @@ apptainer exec --nv /opt/containers/pytorch-25.04.sif \
 ```
 
 ## 8. Evaluation (the creation-quality metrics)
-`src/evaluation/`: `spectrogram_sim` (MCD/SSIM), `speaker_sim` (ECAPA cosine, PyTorch
+`src/evaluation/`: `spectrogram_sim` (MCD/corr), `speaker_sim` (ECAPA cosine, PyTorch
 container), `mos` (build a blind rating sheet with `build_test`, collect ratings, then
 `aggregate`). Compare real vs Keras-TTS vs XTTS.
 
