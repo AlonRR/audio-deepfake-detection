@@ -67,6 +67,15 @@ statistics pooling learns softmax weights over the time axis, then takes a weigh
 mean + std — the same softmax-weighted-sum as seq2seq attention, repurposed for temporal
 aggregation into a fixed-length utterance vector.
 
+**You swept the learning rate — is the headline 0.67% from the best config?** No, and the
+report says so. 0.67% comes from `ssl_xlsr_run1` at the **default lr=1e-3** (dev 0.040%).
+The sweep ran afterwards and lr=1e-4/3e-4 edged it on dev (0.033%), but I never re-scored
+that config on eval. The difference is ~0.007 percentage points on 25k dev trials — a
+couple of decisions, inside run-to-run noise — so I would not expect eval to move
+materially. The honest statement is that the headline is the pre-sweep default, and the
+sweep's value was showing the back-end is *insensitive* to LR across two orders of
+magnitude, then breaking at 1e-2 and diverging at 1e-1.
+
 **Why did the 4k subset give 0% EER?** The subset's spoof half was effectively one attack
 type, trivially separable → the CNN overfit (train acc ~1.0, val ~0.76). It proved subset
 eval is deceptive and motivated full-data + unseen-eval evaluation.
