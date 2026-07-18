@@ -31,17 +31,17 @@ def _device() -> str:
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def _zero_shot(prompts, ref, out_dir):
+def _zero_shot(items, ref, out_dir):
     from TTS.api import TTS
 
     tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(_device())
-    for i, text in enumerate(prompts):
+    for i, (name, text) in enumerate(items):
         tts.tts_to_file(text=text, speaker_wav=ref, language="en",
-                        file_path=os.path.join(out_dir, f"xtts_{i:02d}.wav"))
-        print(f"[{i:02d}] {text[:40]!r}")
+                        file_path=os.path.join(out_dir, f"{name}.wav"))
+        print(f"[{i:02d}] {name} {text[:40]!r}")
 
 
-def _finetuned(prompts, ref, ckpt_dir, out_dir):
+def _finetuned(items, ref, ckpt_dir, out_dir):
     import torch
     from TTS.tts.configs.xtts_config import XttsConfig
     from TTS.tts.models.xtts import Xtts
@@ -53,12 +53,12 @@ def _finetuned(prompts, ref, ckpt_dir, out_dir):
     model.to(_device())
 
     gpt_lat, spk_emb = model.get_conditioning_latents(audio_path=[ref])
-    for i, text in enumerate(prompts):
+    for i, (name, text) in enumerate(items):
         with torch.no_grad():
             out = model.inference(text, "en", gpt_lat, spk_emb, temperature=0.7)
-        save_wav(os.path.join(out_dir, f"xtts_{i:02d}.wav"),
+        save_wav(os.path.join(out_dir, f"{name}.wav"),
                  np.asarray(out["wav"], dtype=np.float32), XTTS_SR)
-        print(f"[{i:02d}] {text[:40]!r}")
+        print(f"[{i:02d}] {name} {text[:40]!r}")
 
 
 def main() -> None:
@@ -67,6 +67,9 @@ def main() -> None:
     ap.add_argument("--ref", help="speaker reference wav (defaults to first data/raw/wavs clip)")
     ap.add_argument("--ckpt-dir", help="fine-tuned checkpoint dir (finetuned mode)")
     ap.add_argument("--out", required=True)
+    # Parallel mode: speak the HELD-OUT transcripts instead of PROMPTS so MCD /
+    # log-mel SSIM compare identical content against the real held-out audio.
+    ap.add_argument("--texts-csv", help="LJSpeech metadata to speak instead of PROMPTS")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
@@ -74,13 +77,19 @@ def main() -> None:
     if not ref:
         raise SystemExit("no speaker reference wav (pass --ref or run prepare.py first)")
 
+    if args.texts_csv:
+        from src.common.metadata import load_texts
+        items = load_texts(args.texts_csv)
+    else:
+        items = [(f"xtts_{i:02d}", t) for i, t in enumerate(PROMPTS)]
+
     if args.mode == "zero_shot":
-        _zero_shot(PROMPTS, ref, args.out)
+        _zero_shot(items, ref, args.out)
     else:
         if not args.ckpt_dir:
             raise SystemExit("--ckpt-dir required for finetuned mode")
-        _finetuned(PROMPTS, ref, args.ckpt_dir, args.out)
-    print(f"wrote {len(PROMPTS)} clips -> {args.out}")
+        _finetuned(items, ref, args.ckpt_dir, args.out)
+    print(f"wrote {len(items)} clips -> {args.out}")
 
 
 if __name__ == "__main__":

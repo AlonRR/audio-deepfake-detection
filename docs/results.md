@@ -160,6 +160,46 @@ Held out: `clip_0004` (6.6 s, narration) · `clip_0013` (7.4 s, expressive) ·
 - Systems: **A1** from-scratch Keras Tacotron2-lite (weak baseline, Griffin-Lim) · **A2**
   fine-tuned **XTTS-v2** (Coqui). Synthesize **≥10 clips** of varying length/complexity.
 
+### A.1b Getting the creation half to run at all — the environment log
+
+The creation pipeline had never been executed before this pass. Seven distinct
+blockers surfaced, each hidden behind the previous one; **none were in the model
+code**. Recorded because the brief rewards showing the process, and because
+several are traps any student on this cluster would hit.
+
+| # | Symptom | Actual cause | Fix |
+|---|---|---|---|
+| 1 | Job rejected at submit | `--time=08:00:00` but the `bsc` QOS caps **MaxWall at 2 h** | 2 h; the run needs ~7 min anyway |
+| 2 | `ResolutionImpossible`, blamed `numpy>=2` | Misleading. The container sets `PIP_CONSTRAINT=/etc/pip/constraint.txt` pinning `tensorboard==2.16.2`, blocking `coqui-tts-trainer` (needs ≥2.17). Pip backtracked to old coqui versions and reported *their* numpy pin instead | override `PIP_CONSTRAINT` with our own (numpy-only) file |
+| 3 | `No module named 'torchaudio'` | NGC PyTorch container ships torch but not torchaudio | install it |
+| 4 | torchaudio import RuntimeError | torch built on **CUDA 12.9**, PyPI torchaudio on **12.6**; no cu129 wheel exists for 2.7.0 | use the **CPU** torchaudio wheel — it carries no CUDA version to clash, and torchaudio is only used for audio I/O here |
+| 5 | `cannot import name 'isin_mps_friendly'` | **Upstream bug**: `coqui-tts` declares `transformers>=4.57` with no upper bound but calls an API **transformers 5 removed** | pin `<5` in a *separate* user-site (`.pyuser_xtts`) so the detection env, which needs 5.x for XLS-R, is untouched |
+| 6 | `IndexError: LJSpeech format expects 3 pipe-delimited columns` | We wrote `id\|text`; the formatter wants `id\|text\|normalized_text` | emit 3 columns |
+| 7 | Job `OUT_OF_MEMORY` on synthesis | `best_model.pth` is **5.6 GB** — a trainer checkpoint carrying optimizer state, not 1.9 GB of weights | strip to `{"model": ...}` before inference |
+
+Ties to `L18_gan__slides.pdf` only at the vocoder level; the debugging itself is
+infrastructure, but items 2, 4 and 5 are worth an oral answer because they show
+the difference between *what an error says* and *what is actually wrong*.
+
+### A.1c XTTS-v2 fine-tune *(done — job 509, 7 min 11 s on the L4)*
+
+30 train clips, batch 3, lr 5e-6, 10 epochs ≈ **100 optimizer steps**.
+
+| Epoch | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | **9** | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| eval loss | 3.825 | 3.707 | 3.634 | 3.573 | 3.525 | 3.504 | 3.499 | 3.487 | **3.485** | 3.488 |
+
+Monotonic decline for 9 epochs (−8.9%), then epoch 10 **rises** — the trainer
+selected epoch 9 (`best_model_81.pth`). Two honest observations:
+
+- The model *did* move, but plateaued hard by epoch 7. More epochs at this
+  learning rate buys very little; the gain would have to come from a higher lr,
+  which risks damaging a 1.9 B-parameter pretrained model on 4 minutes of data.
+- The predicted outcome (that ~100 steps would barely shift a model this size)
+  was **partly wrong** — the loss did fall meaningfully — and partly right, in
+  that it converged almost immediately. The zero-shot-vs-fine-tuned comparison
+  in A.2 is what settles whether that loss drop is audible.
+
 ### A.2 Quality metrics *(tables to fill)*
 | Metric | Real (ref) | A1 Keras-TTS | A2 XTTS-v2 |
 |---|---|---|---|
