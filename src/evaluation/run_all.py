@@ -118,7 +118,7 @@ def _write_table(results: dict, path: str) -> None:
         return fmt.format(d) if isinstance(d, (int, float)) else "—"
 
     lines = [
-        "| System | MCD (dB) ↓ | log-mel L2 ↓ | log-mel SSIM ↑ | Speaker cosine ↑ |",
+        "| System | MCD (dB) ↓ | log-mel L2 ↓ | log-mel corr ↑ | Speaker cosine ↑ |",
         "|---|---|---|---|---|",
     ]
     for name, e in results.items():
@@ -126,7 +126,7 @@ def _write_table(results: dict, path: str) -> None:
             f"| {name} "
             f"| {g(e, 'spectrogram', 'mcd_mean', fmt='{:.2f}')} "
             f"| {g(e, 'spectrogram', 'logmel_l2_mean')} "
-            f"| {g(e, 'spectrogram', 'ssim_mean')} "
+            f"| {g(e, 'spectrogram', 'logmel_corr_mean')} "
             f"| {g(e, 'speaker', 'cloned_cosine_mean')} |"
         )
     any_spk = next((e["speaker"] for e in results.values()

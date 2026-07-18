@@ -14,10 +14,11 @@ Final project for **Neural Networks** (Shenkar College, Dr. Eran Kaufman). Two h
 > **detection** — SSL frontend + Keras back-end reaches **0.67% EER** on unseen ASVspoof
 > eval attacks vs **18.55%** for the CNN-LFCC baseline;
 > **creation** — fine-tuned XTTS-v2 reaches **0.449** speaker cosine against a
-> real-vs-real ceiling of **0.915**, while the from-scratch Keras baseline fails
+> real-vs-real ceiling of **0.848**, while the from-scratch Keras baseline fails
 > completely (and *diagnosably*);
 > **cross-generator test** — both detectors collapse on our own recordings, scoring
-> *genuine* speech at **0.0009** bona-fide. That failure is the project's main finding.
+> *genuine* speech at **0.0009** bona-fide (**n=4 real clips — directional, not precise**).
+> That failure is the project's main finding.
 >
 > Results: [`docs/results.md`](docs/results.md) · method: [`docs/proposal.md`](docs/proposal.md)
 > · references: [`docs/literature.md`](docs/literature.md).

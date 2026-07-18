@@ -75,10 +75,15 @@ def lfcc(wav: np.ndarray, cfg: FeatureConfig = FeatureConfig()) -> np.ndarray:
     spec = np.abs(
         librosa.stft(wav, n_fft=cfg.n_fft, hop_length=cfg.hop_length, win_length=cfg.win_length)
     ) ** 2
-    # linear triangular filterbank across the full band
+    # NOTE: this is an HTK-**MEL** filterbank, not a linear one. An earlier comment here
+    # claimed the mel spacing was replaced with linear spacing; it never was, so this
+    # front-end computes 60 MEL-cepstral coefficients (MFCC-60), NOT LFCC. Measured filter
+    # peaks are [31, 312, 719, 1281, 2031, 3094, 4594, 6688] Hz - mel-spaced.
+    # The published numbers under the "lfcc" label were produced by THIS code, so they are
+    # real; only the name is wrong. Changing the filterbank now would invalidate them, so
+    # the label is corrected in the docs instead. See docs/results.md B.3.
     fb = librosa.filters.mel(sr=cfg.sr, n_fft=cfg.n_fft, n_mels=cfg.n_lfcc,
                              fmin=cfg.fmin, fmax=cfg.fmax, htk=True, norm=None)
-    # replace mel spacing with linear spacing by using a linearly-spaced filterbank:
     feat = np.log(np.maximum(fb @ spec, 1e-10))
     cep = dct(feat, type=2, axis=0, norm="ortho")[: cfg.n_lfcc]
     return _cmvn(cep)

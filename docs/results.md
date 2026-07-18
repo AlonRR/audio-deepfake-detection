@@ -15,7 +15,8 @@ L4**. The one outstanding item is the **MOS listening panel**, which needs human
   dev reuses train's attacks **A01–A06**; eval uses **unseen A07–A19** → eval is the real
   generalization test.
 - **Metrics:** EER, min t-DCF (ASVspoof2019 legacy cost model), DET curves.
-- **Front-ends:** log-mel (80-bin) · LFCC (60-dim, ASVspoof standard) · SSL = frozen
+- **Front-ends:** log-mel (80-bin) · **MFCC-60** (60 mel-cepstra + CMVN; labelled
+  `lfcc` in the code and in the tables below — see the retraction in B.3) · SSL = frozen
   **wav2vec2-XLS-R-300M** (1024-d, layer-averaged, 200 frames).
 - **Back-ends (own, Keras):** 2-D CNN (baseline) · RawNet2 (raw waveform, SincConv + FMS
   + GRU) · attentive-statistics-pooling classifier over SSL features.
@@ -27,25 +28,59 @@ L4**. The one outstanding item is the **MOS listening panel**, which needs human
 | Detector (full LA) | Dev EER | Eval EER (unseen) | Eval min t-DCF |
 |---|---:|---:|---:|
 | CNN · log-mel | 18.99% | — | — |
-| CNN · LFCC | 12.99% | 18.55% | 0.3835 |
+| CNN · MFCC-60 (code label `lfcc`) † | 12.99% | 18.55% | 0.3835 |
 | RawNet2 (raw, from scratch) | collapsed † | — | — |
 | **SSL XLS-R + Keras back-end** | **0.04%** | **0.668%** | **0.0189** |
 
 † RawNet2 trained from scratch **failed to converge** on our budget — see B.4(4).
+
+**Against published numbers.** The RawNet2 route to a published baseline failed, so the
+comparison is made against the literature directly:
+
+| System | Eval EER (ASVspoof 2019 LA) | Source |
+|---|---:|---|
+| RawNet2 (official baseline) | ~4.7% | Tak et al. 2021, [arXiv:2011.01108](https://arxiv.org/abs/2011.01108) |
+| wav2vec2 + AASIST (the recipe reproduced here) | ~0.2% | Tak et al. 2022, [arXiv:2202.12233](https://arxiv.org/abs/2202.12233) |
+| **This work — XLS-R + Keras back-end** | **0.668%** | `reports/detection/ssl_xlsr_eval/result.json` |
+
+Our 0.668% sits between the two: comfortably better than the official RawNet2 baseline,
+and ~3× worse than the published SSL result — expected, since that system fine-tunes the
+frontend and uses RawBoost augmentation, whereas ours keeps the frontend **frozen** and
+uses no augmentation, deliberately (see the Q&A on why). The point of §B.5 is that this
+comparison, ours included, is made entirely *within one benchmark's recording conditions*.
 
 Figures: `reports/figures/eer_tdcf_comparison.png`, `det_eval_overlay.png`,
 `det_dev_overlay.png`, and per-run learning curves.
 
 ### B.3 Analysis
 - **The SSL frontend dominates and *generalizes*.** On unseen attacks it holds at
-  **0.67% EER** vs the LFCC-CNN's **18.55%** — a **~28×** gap. Its dev→eval degradation is
+  **0.67% EER** vs the cepstral CNN's **18.55%** — a **~28×** gap. Its dev→eval degradation is
   tiny (0.04 → 0.67%), whereas the hand-crafted CNN degrades sharply (12.99 → 18.55%):
   spectrogram CNNs latch onto attack-specific artifacts, while the self-supervised
   representation captures attack-agnostic cues.
-- **Front-end matters for the baseline:** LFCC (12.99%) beats log-mel (18.99%) on dev,
-  consistent with LFCC being the ASVspoof reference front-end.
+- **Front-end matters for the baseline — but not for the reason first written.** The
+  60-coefficient cepstral front-end (12.99%) beats the 80-bin log-mel front-end (18.99%)
+  on dev. The original claim here was *"LFCC beats log-mel, consistent with LFCC being the
+  ASVspoof reference front-end."* **That explanation is wrong and is retracted.**
+  `src/common/audio.py` builds an **HTK-mel** filterbank for the feature labelled `lfcc`
+  — a code comment claimed the mel spacing was swapped for linear spacing, and it never
+  was. Measured filter peaks are `[31, 312, 719, 1281, 2031, 3094, 4594, 6688] Hz`, i.e.
+  mel-spaced; truly linear spacing would be `[0, 1143, …, 8000]`.
+
+  So both arms use a **mel** frequency scale, and the real contrast is *cepstral vs
+  filterbank* (60 mel-cepstra + DCT + CMVN vs 80 log-mel-dB bins), **not** a frequency-
+  scale comparison. The EER numbers are real — they were produced by this code — but the
+  feature is an **MFCC-60**, and everywhere this report says "LFCC" it should be read as
+  that. The genuine LFCC-vs-log-mel experiment was never run.
 - **min t-DCF tracks EER**, confirming the ranking under the ASV-aware cost.
 
+> **The dev EERs above are selection-optimistic.** `dev` is simultaneously the
+> `validation_data`, the `EarlyStopping`/`ModelCheckpoint` monitor with
+> `restore_best_weights=True`, *and* the set the reported `dev_eer_pct` is computed on —
+> and the LR sweep then selected across configs on that same split. Treat **eval**
+> (unseen attacks A07–A19) as the only clean generalisation number; dev is reported for
+> the dev→eval degradation comparison, not as a held-out result.
+>
 > **Which model produced 0.67%?** `reports/ssl_xlsr_run1` — trained at the **default
 > `lr=1e-3`** (`train_ssl.slurm` does not override `train_ssl.py`'s default), dev EER
 > 0.040%. The LR sweep in B.4(5) ran *afterwards* and found lr=1e-4 / 3e-4 marginally
@@ -62,9 +97,14 @@ Figures: `reports/figures/eer_tdcf_comparison.png`, `det_eval_overlay.png`,
    **failed** — a numpy ABI clash from `pip --target` shadowing the container numpy — fixed
    with `--user` installs + a pinned `numpy==1.26.4` constraint.
 2. **The subset trap** (`base_cnn_lfcc_sub`): a 4k biased subset gave a **misleading 0.0%
-   EER** (first-2000 spoof = one attack, trivially separable; train acc ~1.0 / val ~0.76 —
-   overfit). This is *why* we evaluate on the full set + eval. Textbook "don't trust an
-   easy subset."
+   EER**. The first 2000 spoof utterances are effectively a single attack type, so the
+   task is trivially separable: the run ends at **train acc 1.00 / val acc 0.9998**
+   (`base_cnn_lfcc_sub/history.csv`, epoch 11). Note this is *not* classic over-fitting —
+   validation agrees with training. The subset simply carries no signal, so a perfect
+   validation score means nothing. That is *why* we evaluate on the full set plus the
+   unseen-attack eval split. Textbook "don't trust an easy subset."
+   (An earlier draft of this section cited "val ~0.76"; that value occurs only transiently
+   at epoch 5 and is not the state that produced the 0.0% EER.)
 3. **Infra failures & fixes** (see `runtimes.md`): OOM on the 7 GB default memory (log-mel
    peak 7.16 GB; XLS-R extractor leaks ~7 GB / 27k utts) → `--mem` 16–32 GB; home **~50 GB
    quota** exceeded mid eval-extraction → prune caches + resumable extraction.
@@ -112,7 +152,19 @@ Both detectors, scored on **our own clips**: 4 held-out real recordings vs fakes
 | SSL (XLS-R + Keras back-end) | **0.67%** | **29.17%** | 0.137 | **0.0009** |
 | CNN-LFCC baseline | 18.55% | **70.83%** | 0.086 | 0.057 |
 
-*(score = P(bona fide); n_fake = 36 SSL / 12 CNN, n_real = 4)*
+*(score = P(bona fide); n_real = 4 held-out clips)*
+
+> **The two rows are not scored on the same fakes.** The SSL row covers all **36** of our
+> generated clips (12 keras_tts + 12 xtts_zeroshot + 12 xtts_ft); the CNN row covers only
+> the **12 fine-tuned XTTS** clips (`scripts/cross_test.slurm` passes
+> `--fakes data/generated/xtts_ft`). So the rows are not a like-for-like comparison and
+> should not be read as "the CNN is 2.4× worse than the SSL system."
+>
+> The asymmetry runs *against* the CNN row being flattered, not for it: the CNN faced only
+> the hardest fakes, while the SSL row includes the 12 A1 clips that are noise and
+> trivially flagged (§A.1d) — which inflates the SSL system's 88.9% spoof-detection rate.
+> A clean head-to-head would score both on the 24 XTTS clips only; that re-run is a
+> loose end, not a result.
 
 **Both detectors collapse — and the failure is not the one we predicted.**
 
@@ -123,7 +175,8 @@ clones are. Its headline "88.9% spoof detection rate" is therefore meaningless: 
 essentially everything. The CNN is worse, at **70.83% EER** — materially worse than
 chance, i.e. its ranking is inverted.
 
-**Why: channel shift, not synthesis quality.** ASVspoof 2019 LA's bona-fide class is
+**Most consistent with channel shift rather than synthesis quality** — plausible and
+well-supported, but *not isolated* by this experiment (see the limitations below). ASVspoof 2019 LA's bona-fide class is
 VCTK — studio recordings through one microphone and one processing chain. Our real audio
 is a browser capture on a different mic, in a different room, resampled. The
 countermeasures learned *what the ASVspoof bona-fide channel sounds like*, and treat
@@ -151,10 +204,6 @@ claim resting on ASVspoof EER alone is unsafe.
 
 ## Part A — Creation *(complete; MOS ratings pending)*
 
-> The target-voice recording is **in hand** and segmented. Next: the XTTS fine-tune
-> (checkpoint/resume across the 2 h QOS cap) and the Keras Tacotron2-lite baseline,
-> then the evaluation harness fills the tables below.
-
 ### A.1 Setup *(done)*
 
 **Source recording** — `data/raw/source.wav`, read from `data/raw/reading_script.txt`
@@ -174,11 +223,11 @@ echo-cancellation disabled, since they smear the spectral detail cloning depends
 faster-whisper (`small`, VAD) in `src/creation/xtts_finetune/prepare.py`:
 
 - **34 clips · 4.27 min** of speech at 22.05 kHz; 1.8 / 7.4 / 12.2 s (min/median/max);
-  577 words.
+  596 words.
 - Segment window widened to **1.5–13.0 s**. The original 2.0–12.0 s window dropped two
   boundary segments (13.9 s), one of them the numbers-and-proper-nouns line the script
   includes specifically for phonetic coverage.
-- **Spoken-form transcript fixes** (`data/raw/transcript_fixes.json`, 6 applied):
+- **Spoken-form transcript fixes** (`data/raw/transcript_fixes.json`, **7 applied**):
   Whisper emits numerals for spoken numbers (`$89.50`, `1145`, `2026`), which misaligns
   text and audio for the *character-level* A1 baseline. A2/XTTS normalizes internally
   and is largely immune; the fix protects A1 from a confound that would otherwise be
@@ -245,7 +294,8 @@ selected epoch 9 (`best_model_81.pth`). Two honest observations:
 
 - The model *did* move, but plateaued hard by epoch 7. More epochs at this
   learning rate buys very little; the gain would have to come from a higher lr,
-  which risks damaging a 1.9 B-parameter pretrained model on 4 minutes of data.
+  which risks damaging a large pretrained model (~1.9 GB of fp32 weights) on four
+  minutes of data.
 - The predicted outcome (that ~100 steps would barely shift a model this size)
   was **partly wrong** — the loss did fall meaningfully — and partly right, in
   that it converged almost immediately. The zero-shot-vs-fine-tuned comparison
@@ -281,7 +331,7 @@ voice" baseline the assignment asks to compare against.
 | A2 XTTS zero-shot | 12 | 3.65 s | 1.43 | 0.126 | 0.084 | **1.000** |
 | A2 XTTS fine-tuned | 12 | 4.55 s | 1.18 | 0.037 | **0.150** | 0.368 |
 
-Read with care — ZCR and RMS are cheap proxies, not perceptual measures; MCD / SSIM /
+Read with care — ZCR and RMS are cheap proxies, not perceptual measures; MCD / corr /
 speaker-cosine in A.2 are authoritative. But two things already stand out:
 
 1. **A1's zero duration variance** is the cleanest single number showing the baseline
@@ -299,15 +349,15 @@ speaker-cosine in A.2 are authoritative. But two things already stand out:
 ### A.2 Quality metrics *(done — jobs 523/524)*
 
 Scored against the **4 held-out clips** (`metadata_eval.csv`), never against training
-audio. MCD / L2 / SSIM use the **parallel** clips (same transcript as the real
+audio. MCD / L2 / correlation use the **parallel** clips (same transcript as the real
 reference); speaker cosine uses the 12 prompt clips (identity, not content).
 
-| System | MCD ↓ | log-mel L2 ↓ | log-mel SSIM ↑ | Speaker cosine ↑ |
+| System | MCD ↓ | log-mel L2 ↓ | log-mel corr ↑ | Speaker cosine ↑ |
 |---|---|---|---|---|
-| A1 keras_tts | 93.39 | 26.631 | 0.011 | **−0.020** |
-| A2 XTTS zero-shot | 56.00 | 22.721 | 0.092 | 0.430 |
-| **A2 XTTS fine-tuned** | **51.68** | **22.370** | **0.180** | **0.449** |
-| *real (ceiling)* | — | — | — | **0.915** |
+| A1 keras_tts | 39.43 | 26.631 | 0.011 | **−0.020** |
+| A2 XTTS zero-shot | 27.66 | 22.721 | 0.092 | 0.430 |
+| **A2 XTTS fine-tuned** | **25.25** | **22.370** | **0.180** | **0.449** |
+| *real (ceiling)* | — | — | — | **0.848** |
 
 **Every metric orders the systems identically: A1 ≪ zero-shot < fine-tuned.** Three
 things worth saying out loud:
@@ -315,10 +365,10 @@ things worth saying out loud:
 1. **A1's speaker cosine is −0.020 — statistically indistinguishable from zero.** The
    baseline produces nothing speaker-like at all, corroborating the signal analysis in
    A.1d (noise, not speech). It is not "a bad clone"; it is not a clone.
-2. **Fine-tuning helped on every axis**, most clearly on log-mel SSIM, which *doubled*
+2. **Fine-tuning helped on every axis**, most clearly on log-mel correlation, which *doubled*
    (0.092 → 0.180). Together with the ZCR shift in A.1e this answers the question A.1c
    left open: the −8.9% eval-loss drop was real, not cosmetic.
-3. **The ceiling is honest and it is far away.** Real-vs-real cosine is **0.915**; the
+3. **The ceiling is honest and it is far away.** Real-vs-real cosine is **0.848**; the
    best clone reaches **0.449**. Four minutes of audio produces a recognisable but
    clearly imperfect clone — worth stating plainly rather than implying the clone
    "fooled" a speaker model.
@@ -371,8 +421,8 @@ The predicted arc held, and the measurements pin down *why* rather than just *th
   speaker cosine is **−0.020**. Attention never aligned and the stop token was never
   learned from 30 sequences (§A.1d).
 - **A2 is a working clone but not an identity match.** Fine-tuning improved every metric
-  over zero-shot (SSIM 0.092 → 0.180, cosine 0.430 → 0.449), yet the real-vs-real ceiling
-  is **0.915** — four minutes of audio yields a recognisable voice that a speaker-
+  over zero-shot (log-mel corr 0.092 → 0.180, cosine 0.430 → 0.449), yet the real-vs-real ceiling
+  is **0.848** — four minutes of audio yields a recognisable voice that a speaker-
   verification model still separates easily.
 - The A1 → A2 gap is the "what failed / how I improved" narrative the brief asks for, and
   the fix was *not* more tuning of A1: it was recognising that a from-scratch seq2seq TTS

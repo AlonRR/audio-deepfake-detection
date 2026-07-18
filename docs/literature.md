@@ -98,7 +98,7 @@ confirmed on 2026-07-18. None are recalled from memory.
   Speaker-embedding network used for the **speaker-cosine-similarity** creation metric.
 - **Mel-Cepstral Distortion (MCD)** — Kubichek, 1993 (classic).
   The objective spectral-distance metric for the **spectrogram-similarity** creation
-  metric; pair with log-mel L2/SSIM.
+  metric; pair with log-mel L2/correlation.
 - *(Outside course materials, optional)* **UTMOS / NISQA** — automatic MOS predictors;
   a cheap proxy to sanity-check the human MOS panel. Flag clearly as non-course, and as
   a proxy for (not a replacement of) human MOS.
