@@ -18,12 +18,17 @@ Numbers: `docs/results.md`; figures: `reports/figures/`.
 5. **Detection — show the process** *(filled)* — smoke tests (first one failed: numpy
    ABI) → the **4k-subset 0% EER trap** → full-data + eval; OOM & 50 GB-quota fixes.
    Figures: `base_cnn_lfcc_sub_learning_curves.png`, per-run curves.
-6. **Approach — creation** *(scaffold)* — A1 Keras Tacotron2-lite (fails on purpose) →
-   A2 XTTS-v2 fine-tune. Ties to RNN / attention / GAN course material.
-7. **Creation results** *(scaffold)* — MOS / MCD / speaker-cosine table (real vs A1 vs
-   A2); mel-spectrograms; the attention-collapse "how I improved" story.
-8. **Innovation — cross-test** *(scaffold)* — detector on my own clips; the
-   generalization gap that closes the creation↔detection loop.
+6. **Approach — creation** *(filled)* — A1 Keras Tacotron2-lite trained from scratch on
+   4 min (`ML4.pptx` RNN, `attention.pptx`) → A2 XTTS-v2 fine-tune (Transformer +
+   speaker embedding + HiFi-GAN vocoder; `word embedding.pptx`, `L18_gan__slides.pdf`).
+7. **Creation results** *(filled)* — headline: **every metric orders A1 ≪ zero-shot <
+   fine-tuned**; speaker cosine **0.449** vs a real-vs-real ceiling of **0.915**; SSIM
+   doubled 0.092 → 0.180 with fine-tuning. A1 cosine **−0.020** = not a clone at all.
+   XTTS loss curve 3.825 → 3.485, best epoch 9 (epoch 10 rises → early stop).
+8. **Innovation — cross-test** *(filled)* — **both detectors collapse**: SSL 0.67% →
+   **29.17%** EER, CNN 18.55% → **70.83%** (worse than chance). The decisive number:
+   the SSL detector scores my **real** held-out speech at **0.0009** bona-fide. Channel
+   shift, not generator novelty.
 9. **Demo** — play real vs cloned clips; live detector call on a held-out clip.
 10. **Limitations & future work** — single speaker, one GPU / 2 h cap, frozen frontend;
     next: SSL fine-tune, AASIST graph back-end, In-the-Wild test.
@@ -76,6 +81,51 @@ training, tuning), the Keras TTS baseline, the whole evaluation harness, and the
 cross-generator innovation are mine; XTTS and XLS-R are used as pretrained tools, stated
 plainly.
 
-**(Creation, pending)** Why A1 worse than A2 (data size, attention collapse, Griffin-Lim);
-what MCD / speaker-cosine measure; where GAN material appears (HiFi-GAN vocoder). — draft
-once results are in.
+**Why did A1 fail, and how do you know it's not just "bad quality"?** Because its output
+is provably independent of its input. All 12 clips are exactly 9.28 s — the `max_steps`
+cap — whether the prompt is one word or thirteen; duration **std = 0.00 s** against 2.35 s
+for real speech. The stop token never fired once. Speaker cosine is **−0.020**, i.e. zero.
+Two causes compound: attention never converged to a monotonic text↔mel alignment
+(`attention.pptx`), and the stop token is a *single positive per sequence* — far too rare
+a signal to learn from 30 sequences. Griffin-Lim then adds phase artifacts on top of an
+already-broken mel. Fixing it needs orders of magnitude more data, at which point it stops
+being the "from scratch on my own voice" baseline the brief asks me to compare against.
+
+**Did fine-tuning XTTS actually do anything, or did you just run it?** Independent
+evidence on three axes. Eval loss fell 3.825 → 3.485 over 9 epochs and *rose* at epoch 10,
+so the trainer early-stopped at 9 — I did not pick a round number. Log-mel SSIM doubled
+(0.092 → 0.180). Zero-crossing rate moved from 0.084 to **0.150** against real speech at
+0.154. Speaker cosine rose 0.430 → 0.449. Small but consistent in the same direction on
+metrics that don't share a failure mode.
+
+**Your MCD is ~52 — published MCD is 4–8 dB. Explain.** It is not comparable, and I say so
+in the report. Published MCD uses MGC-based cepstral analysis (SPTK, alpha warping); mine
+is a DCT of the log-mel spectrum, which lands about an order of magnitude higher. I use it
+to *rank* systems on parallel utterances, not to grade them. I also found and fixed two
+real bugs in it: `librosa.feature.mfcc` applies `power_to_db`, so the standard MCD constant
+was scaling a second time (giving 476–665), and silent frames dominated the mean because
+`log(~0)` swings wildly. After the fix, identical signals give exactly 0.00, and a
+same-text synthesis (51.9) scores below a *different-text real recording of the same
+speaker* (77.2) — so it tracks content, as MCD should.
+
+**Why is speaker cosine only 0.449 — didn't the clone work?** It worked partially, and
+overstating that would be dishonest. Real-vs-real is **0.915**; the clone reaches 0.449 —
+recognisably the right speaker to a listener, but clearly separable to an embedding model.
+Four minutes is simply not much data. The honest claim is "a convincing-sounding clone
+that does not fool a speaker-verification system," not "a clone that defeats ASV."
+
+**Your detector got 0.67% EER but 29% on your own clips. Which is the real number?**
+Neither in isolation — and the interesting part isn't the fakes. My *genuine* held-out
+speech scores **0.0009** bona-fide: the detector is more certain my real voice is fake than
+that the XTTS clips are. That is channel shift. ASVspoof's bona-fide class is VCTK, one
+studio mic and chain; my recording is a browser capture in a bedroom. The model learned the
+benchmark's recording conditions, not authenticity — and XTTS output, being smooth and
+denoised, is *closer* to VCTK than my real audio is. So 0.67% is partly a property of the
+benchmark. The caveat is n_real = 4, so this is directional; the controlled follow-up is to
+hold the channel constant and vary only the generator.
+
+**Where is MOS?** Built, not scored. `reports/evaluation/mos/` holds a genuine blind test —
+40 clips under opaque tokens, listener sheet (`token,rating`) separated from the hidden key.
+I did not invent ratings; MOS requires human listeners and the panel is pending. An earlier
+version of the harness leaked the system name into the listener's own sheet, which would
+have invalidated the scores — that is fixed.
