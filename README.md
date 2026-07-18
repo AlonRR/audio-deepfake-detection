@@ -44,10 +44,10 @@ Torch and TensorFlow must **not** share one environment. Create two:
 
 ```bash
 # Part A (voice cloning) + SSL frontend + speaker-embedding metric — PyTorch side
-uv venv .venv-creation && uv sync --extra creation --extra ssl
+UV_PROJECT_ENVIRONMENT=.venv-creation  uv sync --extra creation --extra ssl
 
 # Part B (Keras detection back-end + Keras TTS baseline) — TensorFlow side
-uv venv .venv-detection && uv sync --extra detection
+UV_PROJECT_ENVIRONMENT=.venv-detection uv sync --extra detection
 ```
 
 On the **Shenkar Virtual Lab** these two map to the ready-made GPU containers

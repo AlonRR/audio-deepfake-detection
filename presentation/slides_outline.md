@@ -22,7 +22,7 @@ Numbers: `docs/results.md`; figures: `reports/figures/`.
    4 min (`ML4.pptx` RNN, `attention.pptx`) → A2 XTTS-v2 fine-tune (Transformer +
    speaker embedding + HiFi-GAN vocoder; `word embedding.pptx`, `L18_gan__slides.pdf`).
 7. **Creation results** *(filled)* — headline: **every metric orders A1 ≪ zero-shot <
-   fine-tuned**; speaker cosine **0.449** vs a real-vs-real ceiling of **0.848**; SSIM
+   fine-tuned**; speaker cosine **0.449** vs a real-vs-real ceiling of **0.848**; log-mel correlation
    doubled 0.092 → 0.180 with fine-tuning. A1 cosine **−0.020** = not a clone at all.
    XTTS loss curve 3.825 → 3.485, best epoch 9 (epoch 10 rises → early stop).
 8. **Innovation — cross-test** *(filled)* — **both detectors collapse**: SSL 0.67% →
@@ -118,7 +118,7 @@ being the "from scratch on my own voice" baseline the brief asks me to compare a
 
 **Did fine-tuning XTTS actually do anything, or did you just run it?** Independent
 evidence on three axes. Eval loss fell 3.825 → 3.485 over 9 epochs and *rose* at epoch 10,
-so the trainer early-stopped at 9 — I did not pick a round number. Log-mel SSIM doubled
+so the trainer early-stopped at 9 — I did not pick a round number. Log-mel correlation doubled
 (0.092 → 0.180). Zero-crossing rate moved from 0.084 to **0.150** against real speech at
 0.154. Speaker cosine rose 0.430 → 0.449. Small but consistent in the same direction on
 metrics that don't share a failure mode.
