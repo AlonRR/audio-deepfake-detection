@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice clone &amp; deepfake detector</title>
+<style>
+  :root {
+    --bg:#14161a; --panel:#1c1f26; --panel2:#232733; --line:#2f3542;
+    --ink:#e8eaf0; --dim:#939bad; --accent:#5b9dff; --good:#46c98b;
+    --warn:#e8b25c; --bad:#e8615c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 -apple-system,"Segoe UI",system-ui,sans-serif}
+  header{padding:16px 24px;border-bottom:1px solid var(--line);background:var(--panel);
+         display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  header h1{margin:0;font-size:16px;font-weight:600}
+  header .sub{color:var(--dim);font-size:13px}
+  main{max-width:880px;margin:0 auto;padding:26px 22px 60px}
+
+  .tabs{display:flex;gap:8px;margin-bottom:22px}
+  .tab{padding:9px 18px;border-radius:8px;cursor:pointer;border:1px solid var(--line);
+       background:var(--panel2);color:var(--dim);font-size:14px;font-family:inherit}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#08172e;font-weight:600}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;
+        margin-bottom:18px}
+  .card h2{margin:0 0 6px;font-size:15px}
+  .card p.hint{margin:0 0 16px;color:var(--dim);font-size:13px}
+
+  textarea{width:100%;min-height:110px;padding:12px;border-radius:8px;resize:vertical;
+           background:var(--bg);color:var(--ink);border:1px solid var(--line);
+           font:15px/1.5 inherit}
+  textarea:focus{outline:none;border-color:var(--accent)}
+
+  .row{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  button.go{padding:11px 22px;border-radius:8px;border:none;cursor:pointer;
+            background:var(--accent);color:#08172e;font-weight:600;font-size:14px;font-family:inherit}
+  button.alt{padding:10px 18px;border-radius:8px;cursor:pointer;background:var(--panel2);
+             color:var(--ink);border:1px solid var(--line);font-size:14px;font-family:inherit}
+  button.alt:hover:not(:disabled){border-color:var(--accent)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+
+  .recbtn{display:flex;align-items:center;gap:10px;padding:11px 22px;border-radius:999px;
+          cursor:pointer;border:none;background:var(--bad);color:#fff;font-size:14px;
+          font-weight:600;font-family:inherit}
+  .recbtn .dot{width:11px;height:11px;border-radius:50%;background:#fff}
+  .recbtn.on{background:var(--panel2);border:1px solid var(--bad)}
+  .recbtn.on .dot{background:var(--bad);animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+  .meter{height:8px;border-radius:4px;background:var(--panel2);overflow:hidden;
+         flex:1;min-width:120px;max-width:260px}
+  .meter > i{display:block;height:100%;width:0;background:var(--good);transition:width .05s}
+  .meter > i.hot{background:var(--warn)} .meter > i.clip{background:var(--bad)}
+
+  .status{font-size:13px;color:var(--dim);min-height:20px}
+  .status.err{color:var(--bad)} .status.ok{color:var(--good)}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);
+        border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;
+        vertical-align:-2px;margin-right:7px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  audio{width:100%;margin-top:14px}
+  .hidden{display:none!important}
+  .src{font-size:12.5px;color:var(--dim);margin-top:10px}
+  .src b{color:var(--ink)}
+
+  .verdict{margin-top:18px;padding:16px;border-radius:10px;background:var(--panel2);
+           border:1px solid var(--line)}
+  .verdict .big{font-size:22px;font-weight:600;margin-bottom:10px}
+  .bar{height:10px;border-radius:5px;background:var(--bg);overflow:hidden;margin:8px 0 4px}
+  .bar > i{display:block;height:100%;width:0;transition:width .4s}
+  .metric{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-top:12px}
+  .note{margin-top:14px;font-size:12.5px;color:var(--dim);border-left:2px solid var(--warn);
+        padding-left:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Voice clone &amp; deepfake detector</h1>
+  <span class="sub">fine-tuned XTTS-v2 &middot; SSL + Keras detector &middot; runs on the lab L4</span>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab active" data-tab="syn">Synthesize</button>
+    <button class="tab" data-tab="det">Detect</button>
+  </div>
+
+  <!-- ── SYNTHESIZE ───────────────────────────────────────────── -->
+  <section id="syn">
+    <div class="card">
+      <h2>Speak in the cloned voice</h2>
+      <p class="hint">Type anything — the fine-tuned model was trained on ~4 minutes of the
+        target speaker, so this text is unseen.</p>
+      <textarea id="text">This voice was cloned from about four minutes of recorded speech.</textarea>
+      <div class="row">
+        <button class="go" id="synBtn">Synthesize</button>
+        <button class="alt hidden" id="toDet">Send to detector &rarr;</button>
+        <span class="status" id="synStatus"></span>
+      </div>
+      <audio id="player" controls class="hidden"></audio>
+    </div>
+  </section>
+
+  <!-- ── DETECT ───────────────────────────────────────────────── -->
+  <section id="det" class="hidden">
+    <div class="card">
+      <h2>Record straight into the detector</h2>
+      <p class="hint">Record a few seconds of real speech, then score it. Watch the level
+        bar to confirm the mic is live.</p>
+      <div class="row">
+        <button class="recbtn" id="recBtn"><span class="dot"></span><span id="recLabel">Record</span></button>
+        <div class="meter"><i id="meter"></i></div>
+        <span class="status" id="recStatus">Ready.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>…or load audio another way</h2>
+      <p class="hint">Upload a WAV, or send the last synthesized clip over from the
+        Synthesize tab.</p>
+      <div class="row">
+        <input type="file" id="file" accept="audio/wav,.wav">
+        <button class="alt" id="useSyn" disabled>Use last synthesized clip</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Analyze</h2>
+      <p class="hint">Scored by both detectors — the SSL system (wav2vec2-XLS-R + Keras
+        back-end) and the CNN-LFCC baseline.</p>
+      <audio id="detPlayer" controls class="hidden"></audio>
+      <div class="src" id="srcLabel">No audio loaded yet.</div>
+      <div class="row">
+        <button class="go" id="detBtn" disabled>Analyze</button>
+        <span class="status" id="detStatus"></span>
+      </div>
+      <div id="verdict" class="verdict hidden"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let pending = null;          // {blob, label} queued for the detector
+let lastSynth = null;        // Blob of the most recent synthesis
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => showTab(t.dataset.tab));
+function showTab(name) {
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x.dataset.tab === name));
+  $("syn").classList.toggle("hidden", name !== "syn");
+  $("det").classList.toggle("hidden", name !== "det");
+}
+function busy(el, msg){ el.className = "status"; el.innerHTML = `<span class="spin"></span>${msg}`; }
+
+function setPending(blob, label) {
+  pending = {blob, label};
+  $("detPlayer").src = URL.createObjectURL(blob);
+  $("detPlayer").classList.remove("hidden");
+  $("srcLabel").innerHTML = `Loaded: <b>${label}</b> — ${(blob.size/1024).toFixed(0)} KB`;
+  $("detBtn").disabled = false;
+  $("verdict").classList.add("hidden");
+  $("detStatus").textContent = "";
+}
+
+// ── synthesize ──────────────────────────────────────────────────
+$("synBtn").onclick = async () => {
+  const text = $("text").value.trim();
+  if (!text) { $("synStatus").textContent = "Type something first."; return; }
+  $("synBtn").disabled = true; $("toDet").classList.add("hidden");
+  $("player").classList.add("hidden");
+  busy($("synStatus"), "queued on the GPU — about 30-60s…");
+  try {
+    const r = await fetch("/api/synthesize", {
+      method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({text})
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "failed");
+    $("player").src = j.audio; $("player").classList.remove("hidden");
+    lastSynth = await (await fetch(j.audio)).blob();     // data: URL -> Blob
+    $("toDet").classList.remove("hidden");
+    $("useSyn").disabled = false;
+    $("synStatus").className = "status ok";
+    $("synStatus").textContent = `done (job ${j.job})`;
+  } catch (e) {
+    $("synStatus").className = "status err"; $("synStatus").textContent = e.message;
+  } finally { $("synBtn").disabled = false; }
+};
+
+$("toDet").onclick = () => { setPending(lastSynth, "synthesized clip"); showTab("det"); };
+$("useSyn").onclick = () => { if (lastSynth) setPending(lastSynth, "synthesized clip"); };
+$("file").onchange = e => { const f = e.target.files[0]; if (f) setPending(f, f.name); };
+
+// ── recording (raw capture: browser DSP off, same as tools/record.html) ──
+let ctx, stream, source, proc, zeroGain, chunks = [], sr = 48000, recording = false;
+
+$("recBtn").onclick = async () => recording ? stopRec() : startRec();
+
+async function startRec() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio:{
+      echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1
+    }});
+  } catch (e) {
+    $("recStatus").className = "status err";
+    $("recStatus").textContent = "Mic blocked: " + e.name; return;
+  }
+  ctx = new AudioContext(); sr = ctx.sampleRate;
+  source = ctx.createMediaStreamSource(stream);
+  proc = ctx.createScriptProcessor(4096, 1, 1);
+  chunks = [];
+  proc.onaudioprocess = e => {
+    const inp = e.inputBuffer.getChannelData(0);
+    let peak = 0, sum = 0;
+    for (let i = 0; i < inp.length; i++) { const a = Math.abs(inp[i]); if (a > peak) peak = a; sum += inp[i]*inp[i]; }
+    const m = $("meter");
+    m.style.width = Math.min(100, Math.sqrt(Math.sqrt(sum/inp.length))*190) + "%";
+    m.className = peak > .985 ? "clip" : peak > .75 ? "hot" : "";
+    if (recording) chunks.push(new Float32Array(inp));
+  };
+  zeroGain = ctx.createGain(); zeroGain.gain.value = 0;      // keep the node pumping, no echo
+  source.connect(proc); proc.connect(zeroGain); zeroGain.connect(ctx.destination);
+  recording = true;
+  $("recBtn").classList.add("on"); $("recLabel").textContent = "Stop";
+  $("recStatus").className = "status"; $("recStatus").textContent = `Recording at ${sr} Hz…`;
+}
+
+function stopRec() {
+  recording = false;
+  proc.disconnect(); source.disconnect(); zeroGain.disconnect();
+  stream.getTracks().forEach(t => t.stop()); ctx.close();
+  $("recBtn").classList.remove("on"); $("recLabel").textContent = "Record";
+  $("meter").style.width = "0%";
+  let n = 0; chunks.forEach(c => n += c.length);
+  if (!n) { $("recStatus").className = "status err"; $("recStatus").textContent = "Nothing captured."; return; }
+  const all = new Float32Array(n); let o = 0;
+  for (const c of chunks) { all.set(c, o); o += c.length; }
+  const blob = encodeWAV(all, sr);
+  const secs = (n / sr).toFixed(1);
+  $("recStatus").className = "status ok";
+  $("recStatus").textContent = `Captured ${secs}s — ready to analyze.`;
+  setPending(blob, `live recording (${secs}s)`);
+}
+
+function encodeWAV(samples, rate) {
+  const buf = new ArrayBuffer(44 + samples.length*2), v = new DataView(buf);
+  const str = (off,s) => { for (let i=0;i<s.length;i++) v.setUint8(off+i, s.charCodeAt(i)); };
+  str(0,"RIFF");  v.setUint32(4, 36+samples.length*2, true);
+  str(8,"WAVE");  str(12,"fmt ");
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,rate,true); v.setUint32(28,rate*2,true);
+  v.setUint16(32,2,true); v.setUint16(34,16,true);
+  str(36,"data"); v.setUint32(40, samples.length*2, true);
+  let off = 44;
+  for (let i=0;i<samples.length;i++, off+=2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    v.setInt16(off, s < 0 ? s*0x8000 : s*0x7fff, true);
+  }
+  return new Blob([v], {type:"audio/wav"});
+}
+
+// ── detect ──────────────────────────────────────────────────────
+$("detBtn").onclick = async () => {
+  if (!pending) return;
+  $("detBtn").disabled = true; $("verdict").classList.add("hidden");
+  busy($("detStatus"), "uploading and scoring — about 30-60s…");
+  try {
+    const fd = new FormData();
+    fd.append("file", pending.blob, "probe.wav");
+    const r = await fetch("/api/detect", {method:"POST", body: fd});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "failed");
+    const ssl = j.ssl_bonafide_prob, cnn = j.cnn_bonafide_prob;
+    const real = ssl >= 0.5, col = real ? "var(--good)" : "var(--bad)";
+    $("verdict").innerHTML = `
+      <div class="big" style="color:${col}">${real ? "Likely REAL speech" : "Likely SYNTHETIC"}</div>
+      <div style="font-size:13px;color:var(--dim);margin-bottom:6px">source: ${pending.label}</div>
+      <div>SSL detector — P(bona fide) = <b>${ssl.toExponential(3)}</b></div>
+      <div class="bar"><i style="width:${(ssl*100).toFixed(1)}%;background:${col}"></i></div>
+      <div class="metric"><span>CNN-LFCC baseline</span><span>${cnn.toFixed(4)}</span></div>
+      <div class="note">
+        <b>Expect real speech to be called synthetic here.</b> This detector scores
+        0.67% EER on ASVspoof but scored our own <b>genuine</b> recordings at 0.0009 —
+        it was trained on VCTK studio audio and treats any unfamiliar microphone or room
+        as spoof. That failure is the project's main finding, not a UI bug.
+        See <code>docs/results.md</code> &sect;B.5.
+      </div>`;
+    $("verdict").classList.remove("hidden");
+    $("detStatus").className = "status ok"; $("detStatus").textContent = `done (job ${j.job})`;
+  } catch (e) {
+    $("detStatus").className = "status err"; $("detStatus").textContent = e.message;
+  } finally { $("detBtn").disabled = false; }
+};
+</script>
+</body>
+</html>
