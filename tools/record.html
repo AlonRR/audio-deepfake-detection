@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice sample recorder — audio-deepfake-detection</title>
+<style>
+  :root {
+    --bg: #14161a;
+    --panel: #1c1f26;
+    --panel-2: #232733;
+    --line: #2f3542;
+    --ink: #e8eaf0;
+    --dim: #939bad;
+    --accent: #5b9dff;
+    --good: #46c98b;
+    --warn: #e8b25c;
+    --bad: #e8615c;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column;
+  }
+
+  header {
+    padding: 14px 22px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    background: var(--panel);
+  }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: .2px; }
+  header .sub { color: var(--dim); font-size: 13px; }
+  .spacer { flex: 1; }
+
+  .fontctl { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 13px; }
+  .fontctl button {
+    width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    font-size: 15px; line-height: 1;
+  }
+  .fontctl button:hover { border-color: var(--accent); }
+
+  main { flex: 1; overflow-y: auto; padding: 30px 22px 40px; }
+  .script { max-width: 780px; margin: 0 auto; }
+
+  .part { margin-bottom: 34px; }
+  .part h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1.4px;
+    color: var(--accent); margin: 0 0 10px; font-weight: 600;
+  }
+  .part p {
+    margin: 0; white-space: pre-wrap;
+    font-size: var(--fs, 25px); line-height: 1.62; letter-spacing: .2px;
+  }
+
+  .tips {
+    max-width: 780px; margin: 0 auto 34px; padding: 14px 18px;
+    background: var(--panel); border: 1px solid var(--line);
+    border-left: 3px solid var(--accent); border-radius: 8px;
+    color: var(--dim); font-size: 14px;
+  }
+  .tips b { color: var(--ink); font-weight: 600; }
+  .tips ul { margin: 8px 0 0; padding-left: 20px; }
+  .tips li { margin: 4px 0; }
+
+  footer {
+    border-top: 1px solid var(--line); background: var(--panel);
+    padding: 14px 22px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+
+  .recbtn {
+    display: flex; align-items: center; gap: 11px;
+    padding: 13px 26px; border-radius: 999px; cursor: pointer;
+    border: none; background: var(--bad); color: #fff;
+    font-size: 15px; font-weight: 600; font-family: inherit;
+    transition: background .15s, transform .08s;
+  }
+  .recbtn:hover { filter: brightness(1.1); }
+  .recbtn:active { transform: scale(.98); }
+  .recbtn:disabled { opacity: .45; cursor: not-allowed; }
+  .recbtn .dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; }
+  .recbtn.recording { background: var(--panel-2); border: 1px solid var(--bad); }
+  .recbtn.recording .dot { animation: pulse 1.15s ease-in-out infinite; background: var(--bad); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+
+  .btn2 {
+    padding: 11px 18px; border-radius: 8px; cursor: pointer;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    font-size: 14px; font-family: inherit; font-weight: 500;
+  }
+  .btn2:hover:not(:disabled) { border-color: var(--accent); }
+  .btn2:disabled { opacity: .4; cursor: not-allowed; }
+  .btn2.primary { background: var(--good); border-color: var(--good); color: #0d2019; font-weight: 600; }
+
+  .timer {
+    font-variant-numeric: tabular-nums; font-size: 27px; font-weight: 600;
+    letter-spacing: .5px; min-width: 92px;
+  }
+  .timer .target { display: block; font-size: 11px; font-weight: 400; color: var(--dim); letter-spacing: .3px; }
+  .t-short { color: var(--warn); } .t-good { color: var(--good); } .t-long { color: var(--dim); }
+
+  .meterwrap { flex: 1; min-width: 190px; max-width: 340px; }
+  .meterlabel { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-bottom: 5px; }
+  .meter { height: 9px; border-radius: 5px; background: var(--panel-2); overflow: hidden; position: relative; }
+  .meter .fill { height: 100%; width: 0%; background: var(--good); transition: width .05s linear; }
+  .meter .fill.hot { background: var(--warn); }
+  .meter .fill.clip { background: var(--bad); }
+
+  .status { font-size: 13px; color: var(--dim); min-width: 210px; }
+  .status.err { color: var(--bad); }
+  .status.ok { color: var(--good); }
+  .status.warn { color: var(--warn); }
+
+  audio { height: 34px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Voice sample recorder</h1>
+  <span class="sub">Part A target voice &middot; saves 16-bit mono WAV</span>
+  <div class="spacer"></div>
+  <div class="fontctl">
+    <span>Text size</span>
+    <button id="fdown" title="Smaller">&minus;</button>
+    <button id="fup" title="Larger">+</button>
+  </div>
+</header>
+
+<main>
+  <div class="tips">
+    <b>Before you start:</b> quiet room, no AC or fan. Mic about 20&nbsp;cm away, and keep that
+    distance steady. Watch the level bar below &mdash; aim for it bouncing in the green; if it hits
+    red you are clipping, so back off a little.
+    <ul>
+      <li><b>Mistakes are fine.</b> Pause a beat, re-say the sentence, carry on. Bad takes get dropped when the audio is segmented.</li>
+      <li><b>Read as if telling a story to a friend</b> &mdash; natural pace, let your voice move. Flat reading makes a flat clone.</li>
+      <li>Browser noise-suppression, echo-cancellation and auto-gain are <b>switched off deliberately</b> &mdash; they smear the voice detail the model needs.</li>
+    </ul>
+  </div>
+
+  <div class="script" id="script"></div>
+</main>
+
+<footer>
+  <button class="recbtn" id="rec"><span class="dot"></span><span id="recLabel">Start recording</span></button>
+  <button class="btn2" id="pause" disabled>Pause</button>
+
+  <div class="timer">
+    <span id="time" class="t-short">0:00</span>
+    <span class="target">target 3:00 &ndash; 5:00</span>
+  </div>
+
+  <div class="meterwrap">
+    <div class="meterlabel"><span>Input level</span><span id="peakTxt">&mdash;</span></div>
+    <div class="meter"><div class="fill" id="meter"></div></div>
+  </div>
+
+  <div class="spacer"></div>
+  <audio id="playback" controls class="hidden"></audio>
+  <button class="btn2 primary hidden" id="save">Save WAV</button>
+  <div class="status" id="status">Click “Start recording” and allow microphone access.</div>
+</footer>
+
+<script>
+const PARTS = [
+  ["Part 1 — Warm-up / neutral narration",
+`My name is Alon, and I am recording this short sample to train a speech model on my own voice. I will try to speak clearly and naturally, at a comfortable pace, as if I were telling a story to a friend. The morning light spread across the quiet valley, and a thin ribbon of smoke rose from the old stone chimney. Somewhere beyond the ridge, a river moved slowly through the trees, catching the pale gold of an early autumn sky. There was no hurry in the air, only the soft sound of leaves and the distant call of a single bird. I paused for a moment, breathed in the cool breeze, and listened to the world waking up around me.`],
+  ["Part 2 — Questions and expression (let your voice rise and fall)",
+`Have you ever wondered how a machine learns to speak? It is a strange and wonderful idea! Can a computer really capture the rhythm, the warmth, and the little imperfections that make a voice sound human? What happens when we teach it too little — or far too much? Wait, did you hear that? Listen carefully. Sometimes the answer is hiding in the smallest details. Honestly, I find it amazing. Who would have thought that a few minutes of ordinary speech could become the seed of something entirely new? Slow down, take a breath, and say it again with feeling: this is exciting, and it is only the beginning.`],
+  ["Part 3 — Numbers, names, and dates",
+`Let me read a few numbers and names to add some variety. The meeting is scheduled for March 3rd, 2026, at a quarter past nine. Please call 052-419-8607 if you are running late. We ordered 14 chairs, 27 folders, and roughly 100 paper cups. The train departs from platform 6 and arrives at 11:45. Doctor Alvarez, Missus O'Brien, and Mister Zhang will join us from Tel Aviv, Zurich, and New York. The total came to eighty-nine dollars and fifty cents — a fair price for a very long day.`],
+  ["Part 4 — A classic passage (The North Wind and the Sun)",
+`The North Wind and the Sun were disputing which was the stronger, when a traveler came along wrapped in a warm cloak. They agreed that the one who first succeeded in making the traveler take his cloak off should be considered stronger than the other. Then the North Wind blew as hard as he could, but the more he blew the more closely did the traveler fold his cloak around him; and at last the North Wind gave up the attempt. Then the Sun shone out warmly, and immediately the traveler took off his cloak. And so the North Wind was obliged to confess that the Sun was the stronger of the two.`],
+  ["Part 5 — Phonetically varied sentences (tricky sounds)",
+`A few last lines to cover the tricky sounds. The thick brush of the thorny thistle scratched the fresh, wet leather. She sells shining shells beside the shimmering shore. The judge urged the jury to weigh the strange evidence with measured pleasure. Bright vermillion streaks splashed through the throbbing, thunderous sky. Rough winter winds shook the bare branches, yet the young oak tree stood calm and unmoved. Zoom, buzz, whirl, and click — the little machine hummed a cheerful, chirping tune. That should be plenty; thank you for listening.`]
+];
+
+const $ = id => document.getElementById(id);
+$('script').innerHTML = PARTS.map(([h, t]) =>
+  `<section class="part"><h2>${h}</h2><p>${t}</p></section>`).join('');
+
+// ---- text size -------------------------------------------------------------
+let fs = 25;
+const applyFs = () => document.documentElement.style.setProperty('--fs', fs + 'px');
+$('fup').onclick   = () => { fs = Math.min(46, fs + 2); applyFs(); };
+$('fdown').onclick = () => { fs = Math.max(15, fs - 2); applyFs(); };
+applyFs();
+
+// ---- recording state -------------------------------------------------------
+let ctx, stream, source, proc, zeroGain;
+let chunks = [], sampleRate = 48000;
+let recording = false, paused = false;
+let recSamples = 0, clipped = false, sawSignal = false;
+let tick;
+
+const setStatus = (msg, cls = '') => { const s = $('status'); s.textContent = msg; s.className = 'status ' + cls; };
+
+function fmt(sec) {
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function updateTimer() {
+  const sec = recSamples / sampleRate;
+  const el = $('time');
+  el.textContent = fmt(sec);
+  el.className = sec < 180 ? 't-short' : (sec <= 300 ? 't-good' : 't-long');
+}
+
+async function start() {
+  try {
+    // Deliberately disable browser DSP: it damages the fine spectral detail
+    // that voice cloning depends on, and AGC makes loudness drift over the take.
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl:  false,
+        channelCount: 1
+      }
+    });
+  } catch (e) {
+    setStatus('Microphone blocked: ' + e.name + '. Allow mic access for this page and retry.', 'err');
+    return;
+  }
+
+  ctx = new AudioContext();
+  sampleRate = ctx.sampleRate;
+  source = ctx.createMediaStreamSource(stream);
+  proc = ctx.createScriptProcessor(4096, 1, 1);
+
+  chunks = []; recSamples = 0; clipped = false; sawSignal = false;
+
+  proc.onaudioprocess = e => {
+    const inp = e.inputBuffer.getChannelData(0);
+    let peak = 0, sum = 0;
+    for (let i = 0; i < inp.length; i++) {
+      const a = Math.abs(inp[i]);
+      if (a > peak) peak = a;
+      sum += inp[i] * inp[i];
+    }
+    const rms = Math.sqrt(sum / inp.length);
+
+    // meter (always live, even while paused, so you can set your level)
+    const pct = Math.min(100, Math.sqrt(rms) * 190);
+    const fill = $('meter');
+    fill.style.width = pct + '%';
+    fill.className = 'fill' + (peak > 0.985 ? ' clip' : peak > 0.75 ? ' hot' : '');
+    $('peakTxt').textContent = peak > 0.985 ? 'CLIPPING' : (20 * Math.log10(peak || 1e-6)).toFixed(0) + ' dB';
+
+    if (!recording || paused) return;
+    if (peak > 0.985) clipped = true;
+    if (rms > 0.008) sawSignal = true;
+    chunks.push(new Float32Array(inp));
+    recSamples += inp.length;
+  };
+
+  // gain 0 keeps the processor pumping without echoing the mic to the speakers
+  zeroGain = ctx.createGain();
+  zeroGain.gain.value = 0;
+  source.connect(proc); proc.connect(zeroGain); zeroGain.connect(ctx.destination);
+
+  recording = true; paused = false;
+  $('rec').classList.add('recording');
+  $('recLabel').textContent = 'Stop recording';
+  $('pause').disabled = false;
+  $('playback').classList.add('hidden');
+  $('save').classList.add('hidden');
+  setStatus('Recording at ' + sampleRate + ' Hz — read from the top.', 'ok');
+
+  tick = setInterval(updateTimer, 200);
+}
+
+function stop() {
+  recording = false; paused = false;
+  clearInterval(tick); updateTimer();
+
+  proc.disconnect(); source.disconnect(); zeroGain.disconnect();
+  stream.getTracks().forEach(t => t.stop());
+  ctx.close();
+
+  $('rec').classList.remove('recording');
+  $('recLabel').textContent = 'Start recording';
+  $('pause').disabled = true; $('pause').textContent = 'Pause';
+  $('meter').style.width = '0%'; $('peakTxt').textContent = '—';
+
+  const sec = recSamples / sampleRate;
+  if (!sawSignal) {
+    setStatus('No audio detected — was the right mic selected, or was it muted?', 'err');
+    return;
+  }
+
+  // flatten
+  const all = new Float32Array(recSamples);
+  let o = 0;
+  for (const c of chunks) { all.set(c, o); o += c.length; }
+  window.__wav = encodeWAV(all, sampleRate);
+
+  const url = URL.createObjectURL(window.__wav);
+  const pb = $('playback');
+  pb.src = url; pb.classList.remove('hidden');
+  $('save').classList.remove('hidden');
+
+  const mb = (window.__wav.size / 1048576).toFixed(1);
+  if (clipped) {
+    setStatus(`Done — ${fmt(sec)}, ${mb} MB. Clipping detected: move back from the mic and re-record.`, 'warn');
+  } else if (sec < 150) {
+    setStatus(`Done — ${fmt(sec)}, ${mb} MB. That is short; 3+ minutes gives a noticeably better clone.`, 'warn');
+  } else {
+    setStatus(`Done — ${fmt(sec)}, ${mb} MB. Give it a listen, then save.`, 'ok');
+  }
+}
+
+$('rec').onclick = () => recording ? stop() : start();
+
+$('pause').onclick = () => {
+  if (!recording) return;
+  paused = !paused;
+  $('pause').textContent = paused ? 'Resume' : 'Pause';
+  setStatus(paused ? 'Paused — the timer and file stop here.' : 'Recording…', paused ? 'warn' : 'ok');
+};
+
+// ---- WAV encode (16-bit PCM mono) -----------------------------------------
+function encodeWAV(samples, rate) {
+  const buf = new ArrayBuffer(44 + samples.length * 2);
+  const v = new DataView(buf);
+  const str = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+  str(0, 'RIFF');  v.setUint32(4, 36 + samples.length * 2, true);
+  str(8, 'WAVE');  str(12, 'fmt ');
+  v.setUint32(16, 16, true);            // fmt chunk size
+  v.setUint16(20, 1, true);             // PCM
+  v.setUint16(22, 1, true);             // mono
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true);      // byte rate
+  v.setUint16(32, 2, true);             // block align
+  v.setUint16(34, 16, true);            // bits per sample
+  str(36, 'data'); v.setUint32(40, samples.length * 2, true);
+  let off = 44;
+  for (let i = 0; i < samples.length; i++, off += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return new Blob([v], { type: 'audio/wav' });
+}
+
+// ---- save ------------------------------------------------------------------
+$('save').onclick = async () => {
+  if (!window.__wav) return;
+  const name = 'target_voice.wav';
+
+  if (window.showSaveFilePicker) {
+    try {
+      const h = await window.showSaveFilePicker({
+        suggestedName: name,
+        types: [{ description: 'WAV audio', accept: { 'audio/wav': ['.wav'] } }]
+      });
+      const w = await h.createWritable();
+      await w.write(window.__wav);
+      await w.close();
+      setStatus('Saved. Put it in data/raw/ if you saved elsewhere, then tell Claude.', 'ok');
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') { setStatus('Save cancelled.', ''); return; }
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(window.__wav);
+  a.download = name; a.click();
+  setStatus('Downloaded — move it into data/raw/, then tell Claude.', 'ok');
+};
+</script>
+</body>
+</html>
