@@ -90,7 +90,7 @@ apptainer exec --nv /opt/containers/pytorch-25.04.sif \
     python -m src.creation.xtts_finetune.synthesize --mode finetuned --ckpt-dir models/xtts_ft/run/ --out data/generated/xtts_ft
 ```
 
-## 8. Evaluation (the three required creation metrics)
+## 8. Evaluation (the creation-quality metrics)
 `src/evaluation/`: `spectrogram_sim` (MCD/SSIM), `speaker_sim` (ECAPA cosine, PyTorch
 container), `mos` (build a blind rating sheet with `build_test`, collect ratings, then
 `aggregate`). Compare real vs Keras-TTS vs XTTS.

@@ -48,7 +48,8 @@ rather than a pure reproduction.
 **Concrete goals**
 1. Clone my voice from **1–5 min** and synthesize **≥10 clips** of varying length and
    complexity (short commands → long, punctuation-heavy paragraphs).
-2. Quantify clone quality with the three metrics the brief names: **MOS**, **spectrogram
+2. Quantify clone quality with the metrics the brief suggests (it says *"metrics such
+   as"*, so these are examples rather than a fixed list): **MOS**, **spectrogram
    similarity**, **speaker-embedding cosine similarity**.
 3. Implement a **2020-onward** detector, reproduce a credible **EER** on ASVspoof 2019
    LA, and compare against published numbers.
@@ -115,7 +116,7 @@ comparison.
 medium sentences, and long punctuation-heavy paragraphs (varying "length and
 complexity", per the brief) → `data/generated/`.
 
-### Evaluation of creation (the three required metrics)
+### Evaluation of creation (the metrics the brief suggests)
 
 | Metric | How | Compares |
 |---|---|---|

@@ -138,7 +138,7 @@ claim resting on ASVspoof EER alone is unsafe.
 
 ---
 
-## Part A — Creation *(dataset ready — training pending)*
+## Part A — Creation *(complete; MOS ratings pending)*
 
 > The target-voice recording is **in hand** and segmented. Next: the XTTS fine-tune
 > (checkpoint/resume across the 2 h QOS cap) and the Keras Tacotron2-lite baseline,
@@ -261,7 +261,7 @@ This is the intended contrast with A2, not a bug to fix. Fixing it would need
 orders-of-magnitude more data — i.e. it would stop being the "from scratch on your own
 voice" baseline the assignment asks to compare against.
 
-### A.1e Preliminary signal-level comparison *(crude proxies — not the mandated metrics)*
+### A.1e Preliminary signal-level comparison *(crude proxies — not the evaluation metrics proper)*
 
 | System | n | dur mean | dur std | rms | ZCR | peak |
 |---|---|---|---|---|---|---|
@@ -332,7 +332,12 @@ scores *below* a different-text real recording of the same speaker (77.2), i.e. 
 metric tracks content as MCD should. It remains noise-sensitive, which is the honest
 reason to lean on SSIM and speaker cosine as the primary evidence.
 
-### A.3 MOS — blind test built, **ratings pending**
+### A.3 MOS — blind test built, **ratings pending** *(a suggested metric, not a required one)*
+
+The brief says *"evaluate the quality using metrics such as: MOS · spectrogram
+similarity · voice conversion similarity"* — **"such as"**, i.e. these are examples, not
+a fixed checklist. The two objective ones are scored above; MOS is the only *perceptual*
+measure, so it is worth having, but its absence is not a missing requirement.
 
 `reports/evaluation/mos/` contains a genuine blind test: **40 clips** (4 real + 12 from
 each of the three systems), copied under opaque `clip_NNN` tokens so the filename cannot
