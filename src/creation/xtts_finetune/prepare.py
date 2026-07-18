@@ -119,6 +119,23 @@ def segment(source: str, out: str, model_size: str = "small",
     # metadata.csv is what the trainers read, so the holdout is excluded from it by
     # construction — you cannot accidentally train on the evaluation reference.
     eval_ids = _pick_holdout(rows, holdout)
+
+    # _pick_holdout only compares ADJACENT clips when screening for re-reads. A re-read
+    # separated by two or more clips could therefore leave a near-duplicate of a held-out
+    # transcript in the training split. Verify globally and fail loudly rather than
+    # silently shipping a contaminated evaluation set. (The split shipped with this repo
+    # was checked and is clean: 0 shared 5-grams.)
+    if eval_ids:
+        def _grams(t, n=5):
+            w = t.lower().split()
+            return {" ".join(w[i:i + n]) for i in range(len(w) - n + 1)}
+        train_grams = set().union(*[_grams(t) for c, t, _ in rows if c not in eval_ids]) or set()
+        leaked = {c: sorted(_grams(t) & train_grams)[:3]
+                  for c, t, _ in rows if c in eval_ids and (_grams(t) & train_grams)}
+        if leaked:
+            raise SystemExit(
+                "HOLD-OUT LEAKAGE: these eval clips share 5-grams with training text "
+                f"(likely an un-caught re-read): {leaked}. Re-pick the holdout.")
     _write(os.path.join(out, "metadata_all.csv"), rows)
     _write(os.path.join(out, "metadata.csv"), [r for r in rows if r[0] not in eval_ids])
     if eval_ids:

@@ -27,7 +27,8 @@ Final project for **Neural Networks** (Shenkar College, Dr. Eran Kaufman). Two h
 ## Layout
 
 ```
-docs/            proposal.md (main), literature.md
+docs/            results.md (headline numbers), proposal.md (method), literature.md,
+                 runtimes.md (wall-times), server_runbook.md, goal.md
 data/            raw/ (your recording)  generated/ (fakes)  datasets/ (ASVspoof)  ← gitignored
 src/creation/    keras_tts/ (baseline TTS)   xtts_finetune/ (XTTS-v2)
 src/evaluation/  spectrogram_sim.py  speaker_sim.py  mos.py

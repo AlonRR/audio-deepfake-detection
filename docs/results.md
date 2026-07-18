@@ -310,7 +310,7 @@ diagnosable way — which is what this baseline exists to demonstrate.
 |---|---|
 | **Stop token never learned** | All 12 clips are **9.28 s** — exactly the `max_steps=800` cap — whether the prompt is 1 word (`"hello."`) or 13. Duration **std = 0.00 s**; real speech is 2.35 s. |
 | **Output is independent of the text** | Same corollary: nothing about the input changes the output length. Attention never aligned, so the decoder is not conditioned on the text at all. |
-| **Bimodal collapse** | 6/12 clips near-silent (rms ≤ 0.008, peak ≤ 0.13); the other 6 saturate (peak = 1.000). |
+| **Bimodal collapse** | **7/12** clips near-silent (rms ≤ 0.008, peak ≤ 0.13); the other **5** saturate at peak = 1.000. Regenerate: `python -m src.evaluation.signal_stats` → `reports/evaluation/signal_stats.json`. |
 | **Not speech** | Mean ZCR **0.241** vs **0.154** for real speech — noise-like, not voiced. |
 
 **Why:** 30 clips / ~4 min cannot train a seq2seq TTS from scratch. Two failures compound —
@@ -330,6 +330,9 @@ voice" baseline the assignment asks to compare against.
 | A1 keras_tts | 12 | 9.28 s | **0.00** | 0.027 | 0.241 | 0.452 |
 | A2 XTTS zero-shot | 12 | 3.65 s | 1.43 | 0.126 | 0.084 | **1.000** |
 | A2 XTTS fine-tuned | 12 | 4.55 s | 1.18 | 0.037 | **0.150** | 0.368 |
+
+All values regenerate via `python -m src.evaluation.signal_stats` →
+`reports/evaluation/signal_stats.json` (per-clip figures included).
 
 Read with care — ZCR and RMS are cheap proxies, not perceptual measures; MCD / corr /
 speaker-cosine in A.2 are authoritative. But two things already stand out:

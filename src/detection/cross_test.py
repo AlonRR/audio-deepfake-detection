@@ -7,7 +7,7 @@ both the spectrogram baseline (extract features from audio here) and the SSL bac
 
     # spectrogram CNN detector, own clips (fakes) + real reference:
     python -m src.detection.cross_test --model reports/run1/model.keras --model-type cnn \
-        --feat lfcc --fakes data/generated --real data/raw --out reports/cross
+        --feat lfcc --fakes data/generated/xtts_ft --real data/raw/heldout --out reports/cross
 
     # SSL back-end (cache own-clip features with features_ssl.py first):
     python -m src.detection.cross_test --model reports/ssl_run1/model.keras --model-type ssl \
@@ -46,7 +46,8 @@ def main() -> None:
     ap.add_argument("--model-type", choices=["cnn", "ssl"], required=True)
     ap.add_argument("--feat", choices=["logmel", "lfcc"], default="lfcc")
     ap.add_argument("--fakes", help="folder of generated (spoof) wavs (cnn mode)")
-    ap.add_argument("--real", help="folder of real (bona fide) wavs (cnn mode)")
+    ap.add_argument("--real", help="folder of real (bona fide) wavs (cnn mode). Use "
+                    "data/raw/heldout - data/raw/wavs contains the 30 TRAINING clips.")
     ap.add_argument("--ssl-manifest", help="cached SSL manifest for own clips (ssl mode)")
     ap.add_argument("--out", default="reports/cross")
     args = ap.parse_args()
