@@ -10,9 +10,18 @@ Final project for **Neural Networks** (Shenkar College, Dr. Eran Kaufman). Two h
    (wav2vec2‑XLS‑R / WavLM) feeding a **back‑end trained in Keras**, benchmarked on
    ASVspoof 2019 LA (EER / min t‑DCF), then **cross‑tested on our own generated clips**.
 
-> Status: **scaffold + proposal**. The full method, rationale, experiments, and timeline
-> live in [`docs/proposal.md`](docs/proposal.md); the reading list is in
-> [`docs/literature.md`](docs/literature.md). No model code is implemented yet.
+> **Status: both halves complete.** Headline numbers:
+> **detection** — SSL frontend + Keras back-end reaches **0.67% EER** on unseen ASVspoof
+> eval attacks vs **18.55%** for the CNN-LFCC baseline;
+> **creation** — fine-tuned XTTS-v2 reaches **0.449** speaker cosine against a
+> real-vs-real ceiling of **0.915**, while the from-scratch Keras baseline fails
+> completely (and *diagnosably*);
+> **cross-generator test** — both detectors collapse on our own recordings, scoring
+> *genuine* speech at **0.0009** bona-fide. That failure is the project's main finding.
+>
+> Results: [`docs/results.md`](docs/results.md) · method: [`docs/proposal.md`](docs/proposal.md)
+> · references: [`docs/literature.md`](docs/literature.md).
+> **MOS is built but unrated** — it needs human listeners and no number is invented.
 
 ## Layout
 

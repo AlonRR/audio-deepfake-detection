@@ -1,7 +1,8 @@
 # Results & Analysis
 
-Data-driven results for the two halves. **Detection is complete**; **creation is scaffolded**
-(waiting on the target-voice recording). Method/background: `proposal.md`; references:
+Data-driven results for the two halves — **both complete and run end-to-end on the lab
+L4**. The one outstanding item is the **MOS listening panel**, which needs human raters
+(the blind test is built; no score is invented). Method/background: `proposal.md`; references:
 `literature.md`; wall-times + failure timeline: `runtimes.md`; raw data + figures:
 `../reports/`. Regenerate figures: `scripts/plot_detection.py`.
 
@@ -350,17 +351,26 @@ leak the system, shuffled with a fixed seed.
 Aggregate with `src.evaluation.mos.aggregate([sheets], key_csv)` → per-system mean and
 95% CI. **No MOS number is reported anywhere in this repo until real listeners produce
 one.** Roughly 5–10 raters, ~15 minutes each.
-| Speaker cosine (ECAPA) ↑ | 1.00 | _TBD_ | _TBD_ |
-| MOS (1–5, panel) ↑ | _TBD_ | _TBD_ | _TBD_ |
 
-Figures to generate: mel-spectrogram comparison (real vs A1 vs A2), MCD bars, speaker-cosine
-bars, MOS bars, TTS training curves, and the **attention-alignment** plot (A1 attention
-collapse = the creation-side "show the process" story).
+### A.4 Analysis — what the creation half showed
 
-### A.3 Analysis *(scaffold)*
-Expected arc: A1 rough (too little data, Griffin-Lim artifacts, exposure bias / attention
-collapse) → A2 markedly better (pretrained Transformer + speaker embedding + HiFi-GAN).
-The A1→A2 quality gap *is* the "what failed / how I improved" narrative.
+The predicted arc held, and the measurements pin down *why* rather than just *that*:
+
+- **A1 did not merely sound rough — it never learned the task.** Output duration is
+  constant at the decoder step cap (std **0.00 s**) regardless of input length, and
+  speaker cosine is **−0.020**. Attention never aligned and the stop token was never
+  learned from 30 sequences (§A.1d).
+- **A2 is a working clone but not an identity match.** Fine-tuning improved every metric
+  over zero-shot (SSIM 0.092 → 0.180, cosine 0.430 → 0.449), yet the real-vs-real ceiling
+  is **0.915** — four minutes of audio yields a recognisable voice that a speaker-
+  verification model still separates easily.
+- The A1 → A2 gap is the "what failed / how I improved" narrative the brief asks for, and
+  the fix was *not* more tuning of A1: it was recognising that a from-scratch seq2seq TTS
+  cannot be trained on four minutes at all, and that the leverage lies in pretraining.
+
+*Figures still worth adding if time allows:* mel-spectrogram comparison (real vs A1 vs A2)
+and the A1 attention-alignment plot — both would make the collapse visible rather than
+tabular.
 
 ---
 
