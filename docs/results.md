@@ -46,6 +46,16 @@ Figures: `reports/figures/eer_tdcf_comparison.png`, `det_eval_overlay.png`,
   consistent with LFCC being the ASVspoof reference front-end.
 - **min t-DCF tracks EER**, confirming the ranking under the ASV-aware cost.
 
+> **Which model produced 0.67%?** `reports/ssl_xlsr_run1` — trained at the **default
+> `lr=1e-3`** (`train_ssl.slurm` does not override `train_ssl.py`'s default), dev EER
+> 0.040%. The LR sweep in B.4(5) ran *afterwards* and found lr=1e-4 / 3e-4 marginally
+> better on dev (0.033%), but **that config was never re-scored on eval** — the headline
+> eval number therefore comes from the default LR, not the sweep winner. The gap is
+> 0.033% vs 0.040% on ~25k dev trials, i.e. on the order of a couple of decisions and
+> well inside run-to-run noise, so re-running eval would be unlikely to move 0.67%
+> meaningfully. Stated explicitly because "you swept LR, so which model is the headline?"
+> is a fair question and the honest answer is "the pre-sweep default."
+
 ### B.4 "Show the process" — tries, failures, fixes *(kept as evidence)*
 1. **Pipeline validation on synthetic data** (`smoke_*` runs): all three model types train
    + emit EER/DET on a tiny generated set before touching real data. The *first* smoke
