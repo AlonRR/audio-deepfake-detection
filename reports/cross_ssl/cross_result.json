@@ -1,0 +1,9 @@
+{
+  "n_fake": 36,
+  "n_real": 4,
+  "spoof_detect_rate@0.5": 0.8888888888888888,
+  "fake_score_mean": 0.1365875005722046,
+  "real_score_mean": 0.000934384879656136,
+  "cross_eer_pct": 29.167,
+  "cross_threshold": 7.169742457335815e-05
+}

@@ -1,0 +1,52 @@
+{
+  "held_out": [
+    "clip_0004",
+    "clip_0013",
+    "clip_0019",
+    "clip_0030"
+  ],
+  "systems": {
+    "keras_tts": {
+      "spectrogram": {
+        "mcd_mean": 93.38913392998855,
+        "logmel_l2_mean": 26.631341457366943,
+        "ssim_mean": 0.010739033243494353,
+        "n": 4
+      },
+      "speaker": {
+        "cloned_cosine_mean": -0.020014618762099257,
+        "cloned_cosine_std": 0.04309322737941465,
+        "real_vs_centroid_mean": 0.9146737185394029,
+        "n_cloned": 12
+      }
+    },
+    "xtts_zeroshot": {
+      "spectrogram": {
+        "mcd_mean": 56.00175180880471,
+        "logmel_l2_mean": 22.720551013946533,
+        "ssim_mean": 0.09241353201559331,
+        "n": 4
+      },
+      "speaker": {
+        "cloned_cosine_mean": 0.43039257467649245,
+        "cloned_cosine_std": 0.10265452509155877,
+        "real_vs_centroid_mean": 0.9146737185394029,
+        "n_cloned": 12
+      }
+    },
+    "xtts_ft": {
+      "spectrogram": {
+        "mcd_mean": 51.67566261790101,
+        "logmel_l2_mean": 22.370334148406982,
+        "ssim_mean": 0.18019925856560393,
+        "n": 4
+      },
+      "speaker": {
+        "cloned_cosine_mean": 0.44931069490136144,
+        "cloned_cosine_std": 0.062303586831251506,
+        "real_vs_centroid_mean": 0.9146737185394029,
+        "n_cloned": 12
+      }
+    }
+  }
+}

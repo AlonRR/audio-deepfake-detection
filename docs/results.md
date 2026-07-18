@@ -91,10 +91,50 @@ Figures: `reports/figures/eer_tdcf_comparison.png`, `det_eval_overlay.png`,
    `*_FAIL` configs are skipped once their `history.csv` exists so a resume cannot
    overwrite the divergence evidence.)
 
-### B.5 Innovation — cross-generator test *(scaffold; needs creation half)*
-Score the trained detector on our **own** XTTS / Keras-TTS clips — an unseen, 2025-era
-synthesizer — and compare its score distribution vs real speech and vs its ASVspoof
-operating point. Tool ready: `src/detection/cross_test.py`. _Results TBD._
+### B.5 Innovation — cross-generator test *(done — job 520)*
+
+Both detectors, scored on **our own clips**: 4 held-out real recordings vs fakes from a
+2025-era synthesizer they have never seen.
+
+| Detector | EER on ASVspoof **eval** | **EER on our clips** | mean score, our **fakes** | mean score, our **real** |
+|---|---|---|---|---|
+| SSL (XLS-R + Keras back-end) | **0.67%** | **29.17%** | 0.137 | **0.0009** |
+| CNN-LFCC baseline | 18.55% | **70.83%** | 0.086 | 0.057 |
+
+*(score = P(bona fide); n_fake = 36 SSL / 12 CNN, n_real = 4)*
+
+**Both detectors collapse — and the failure is not the one we predicted.**
+
+The proposal expected the detectors to miss *new fakes*. Instead the decisive number is
+the last column: the SSL detector scores our **genuine** held-out speech at **0.0009**
+bona-fide — it is *more* confident that the real recording is fake than that the XTTS
+clones are. Its headline "88.9% spoof detection rate" is therefore meaningless: it flags
+essentially everything. The CNN is worse, at **70.83% EER** — materially worse than
+chance, i.e. its ranking is inverted.
+
+**Why: channel shift, not synthesis quality.** ASVspoof 2019 LA's bona-fide class is
+VCTK — studio recordings through one microphone and one processing chain. Our real audio
+is a browser capture on a different mic, in a different room, resampled. The
+countermeasures learned *what the ASVspoof bona-fide channel sounds like*, and treat
+anything outside it as spoof. That the fakes score *higher* than real speech follows
+directly: XTTS output is smooth, denoised, studio-like — closer to VCTK than a real
+bedroom recording is.
+
+**This is a stronger claim than the one the proposal set out to make.** The documented
+gap in the literature is "benchmarks contain no 2024–25 TTS." What this shows is sharper
+and more uncomfortable: a detector reporting **0.67% EER** does not merely miss modern
+fakes, it **fails to recognise out-of-domain real speech as real**. The 0.67% is a
+property of the benchmark's recording conditions as much as of the model. Any deployment
+claim resting on ASVspoof EER alone is unsafe.
+
+> **Limitations, stated plainly.** `n_real = 4` — far too few for a stable EER, so treat
+> these as directional, not precise. And per A.1d, A1's clips are noise, so their
+> detection is trivial and inflates the SSL detector's spoof-detection rate; the
+> meaningful fake signal is the 24 XTTS clips. A proper follow-up would hold recording
+> conditions constant — e.g. re-record the real reference through a VCTK-like chain, or
+> score ASVspoof bona-fide audio re-encoded through our capture path — to separate
+> *channel* shift from *generator* shift. That experiment is the natural next step and
+> is not claimed here.
 
 ---
 
@@ -245,11 +285,66 @@ speaker-cosine in A.2 are authoritative. But two things already stand out:
 > **A2** clips, which are real speech from a 2025-era synthesizer. A1's detection rate
 > should not be read as evidence the detector generalizes.
 
-### A.2 Quality metrics *(tables to fill)*
-| Metric | Real (ref) | A1 Keras-TTS | A2 XTTS-v2 |
-|---|---|---|---|
-| MCD (dB) ↓ | — | _TBD_ | _TBD_ |
-| Log-mel SSIM ↑ | — | _TBD_ | _TBD_ |
+### A.2 Quality metrics *(done — jobs 523/524)*
+
+Scored against the **4 held-out clips** (`metadata_eval.csv`), never against training
+audio. MCD / L2 / SSIM use the **parallel** clips (same transcript as the real
+reference); speaker cosine uses the 12 prompt clips (identity, not content).
+
+| System | MCD ↓ | log-mel L2 ↓ | log-mel SSIM ↑ | Speaker cosine ↑ |
+|---|---|---|---|---|
+| A1 keras_tts | 93.39 | 26.631 | 0.011 | **−0.020** |
+| A2 XTTS zero-shot | 56.00 | 22.721 | 0.092 | 0.430 |
+| **A2 XTTS fine-tuned** | **51.68** | **22.370** | **0.180** | **0.449** |
+| *real (ceiling)* | — | — | — | **0.915** |
+
+**Every metric orders the systems identically: A1 ≪ zero-shot < fine-tuned.** Three
+things worth saying out loud:
+
+1. **A1's speaker cosine is −0.020 — statistically indistinguishable from zero.** The
+   baseline produces nothing speaker-like at all, corroborating the signal analysis in
+   A.1d (noise, not speech). It is not "a bad clone"; it is not a clone.
+2. **Fine-tuning helped on every axis**, most clearly on log-mel SSIM, which *doubled*
+   (0.092 → 0.180). Together with the ZCR shift in A.1e this answers the question A.1c
+   left open: the −8.9% eval-loss drop was real, not cosmetic.
+3. **The ceiling is honest and it is far away.** Real-vs-real cosine is **0.915**; the
+   best clone reaches **0.449**. Four minutes of audio produces a recognisable but
+   clearly imperfect clone — worth stating plainly rather than implying the clone
+   "fooled" a speaker model.
+
+#### Caveat on MCD — read before quoting the number
+
+The MCD column is **not comparable to published MCD figures** (typically 4–8 dB for good
+TTS). Published values come from MGC-based mel-cepstral analysis (SPTK/pysptk with alpha
+warping); this implementation is a DCT of the log-mel spectrum, which lands about an
+order of magnitude higher. It is valid for **ranking systems on parallel utterances**,
+not as an absolute quality figure.
+
+The first implementation was worse still and was fixed during this pass — two bugs:
+
+| Bug | Effect | Fix |
+|---|---|---|
+| `librosa.feature.mfcc` applies `power_to_db` (10·log₁₀), but the MCD constant `10/ln10·√2` already assumes natural-log cepstra | scaling applied twice → MCD 476–665 | take natural log of the mel spectrum and DCT it directly |
+| Silence frames included | `log(~0)` is hugely negative and swings with any noise, so silent frames dominated the mean | drop frames > 35 dB below the utterance peak |
+
+Sanity checks after the fix: identical signals → **0.00**; a same-text synthesis (51.9)
+scores *below* a different-text real recording of the same speaker (77.2), i.e. the
+metric tracks content as MCD should. It remains noise-sensitive, which is the honest
+reason to lean on SSIM and speaker cosine as the primary evidence.
+
+### A.3 MOS — blind test built, **ratings pending**
+
+`reports/evaluation/mos/` contains a genuine blind test: **40 clips** (4 real + 12 from
+each of the three systems), copied under opaque `clip_NNN` tokens so the filename cannot
+leak the system, shuffled with a fixed seed.
+
+- `mos_sheet.csv` — `token,rating` only. **This is the file listeners get.**
+- `mos_key.csv` — `token,path,system`. Kept back until ratings are collected.
+- `audio/clip_NNN.wav` — the clips.
+
+Aggregate with `src.evaluation.mos.aggregate([sheets], key_csv)` → per-system mean and
+95% CI. **No MOS number is reported anywhere in this repo until real listeners produce
+one.** Roughly 5–10 raters, ~15 minutes each.
 | Speaker cosine (ECAPA) ↑ | 1.00 | _TBD_ | _TBD_ |
 | MOS (1–5, panel) ↑ | _TBD_ | _TBD_ | _TBD_ |
 
