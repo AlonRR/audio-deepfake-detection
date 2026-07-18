@@ -70,6 +70,12 @@ def main() -> None:
     # Parallel mode: speak the HELD-OUT transcripts instead of PROMPTS so MCD /
     # log-mel SSIM compare identical content against the real held-out audio.
     ap.add_argument("--texts-csv", help="LJSpeech metadata to speak instead of PROMPTS")
+    # On-demand synthesis: say anything, e.g. for the live demo in the oral.
+    #   --text "hello, this is a cloned voice"        (repeatable)
+    #   --text-file lines.txt                         (one sentence per line)
+    ap.add_argument("--text", action="append", help="literal text to speak (repeatable)")
+    ap.add_argument("--text-file", help="file with one sentence per line")
+    ap.add_argument("--name", default="say", help="output filename stem for --text/--text-file")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
@@ -77,7 +83,14 @@ def main() -> None:
     if not ref:
         raise SystemExit("no speaker reference wav (pass --ref or run prepare.py first)")
 
-    if args.texts_csv:
+    literal: list[str] = list(args.text or [])
+    if args.text_file:
+        with open(args.text_file, encoding="utf-8") as fh:
+            literal += [ln.strip() for ln in fh if ln.strip()]
+
+    if literal:
+        items = [(f"{args.name}_{i:02d}", t) for i, t in enumerate(literal)]
+    elif args.texts_csv:
         from src.common.metadata import load_texts
         items = load_texts(args.texts_csv)
     else:
