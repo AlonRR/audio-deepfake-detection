@@ -31,6 +31,9 @@ POLL_SECONDS = 5
 JOB_TIMEOUT = 600
 
 app = Flask(__name__)
+# Uploads are scp'd to a box with a ~50 GB home quota whose exhaustion already killed
+# one job (see docs/runtimes.md). Cap the request body.
+app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
 
 
 def _ssh(cmd: str, timeout: int = 120) -> str:
@@ -93,6 +96,8 @@ def detect():
     with tempfile.TemporaryDirectory() as td:
         local = Path(td) / "upload.wav"
         f.save(local)
+        if local.read_bytes()[:4] != b"RIFF":
+            return jsonify(error="not a WAV file (expected a RIFF header)"), 400
         _ssh(f"mkdir -p {REMOTE_REPO}/data/webui_uploads")
         subprocess.run(["scp", "-q", str(local), f"{HOST_ALIAS}:{remote}"], check=True, timeout=300)
     outdir = f"reports/webui_detect/{stamp}"

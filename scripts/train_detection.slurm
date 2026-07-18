@@ -1,7 +1,10 @@
 #!/bin/bash
+# SUPERSEDED by full_baseline.slurm (which passes --model and --asv-scores,
+# so it emits min_tdcf). Kept for provenance.
 #SBATCH --job-name=adf-detect
+#SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=08:00:00
+#SBATCH --time=02:00:00
 #SBATCH --output=slurm-%j.out
 #
 # Full detection-baseline training on the L4 via Slurm.

@@ -1,7 +1,9 @@
 #!/bin/bash
+# SUPERSEDED by backend_ssl.slurm (which passes --asv-scores). Kept for provenance.
 #SBATCH --job-name=adf-ssl-train
+#SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
-#SBATCH --time=04:00:00
+#SBATCH --time=02:00:00
 #SBATCH --output=slurm-%j.out
 #
 # Train the Keras back-end on cached SSL features (TensorFlow container).

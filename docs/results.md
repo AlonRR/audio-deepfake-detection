@@ -134,6 +134,14 @@ Figures: `reports/figures/eer_tdcf_comparison.png`, `det_eval_overlay.png`,
    before the job hit the 2 h cap; it never reached scoring, so **no EER exists** (the
    figure marks it at the 50% chance line). That is the **deliberate failed run**
    (`ssl_hp_lr1e1_FAIL/history.csv`). Figure: `reports/figures/ssl_lr_sweep.png`.
+   **The proposal promised a five-axis sweep; one axis was run.** `proposal.md` committed
+   to sweeping learning rate, SSL layer selection, pooling type, back-end width/depth, and
+   RawBoost-style augmentation, and flagged this as "(required)". Only **learning rate**
+   was swept. Layer selection was fixed at `avg`, pooling at attentive-statistics, and
+   augmentation at none — those are defaults, **not** selected values, and presenting them
+   as design choices elsewhere in this report understates the gap. The cause is compute:
+   two 2 h jobs both hit the cap on the LR axis alone with a single serialized GPU, so a
+   second axis was never viable.
    (Architecture variants proj=128 / dropout=0.5 were left un-run — confirmed never
    started on the server. Completed configs took ~21–32 min each: early stopping ends
    them at 15–24 epochs and `data_ssl` re-reads all 25k features per epoch; dev is
@@ -196,6 +204,13 @@ claim resting on ASVspoof EER alone is unsafe.
 > detection is trivial and inflates the SSL detector's spoof-detection rate; the
 > meaningful fake signal is the 24 XTTS clips. A proper follow-up would hold recording
 > conditions constant — e.g. re-record the real reference through a VCTK-like chain, or
+> **The proposal also planned an In-the-Wild (Müller 2022) cross-test as a second
+> out-of-domain datapoint, and it was not run** (time; the creation half consumed the
+> session). That omission matters here specifically: In-the-Wild is real-world audio from
+> many channels, so it would have partly separated *channel* shift from *generator* shift
+> — the exact confound this section cannot resolve. It is the cheapest next experiment.
+>
+> Other routes to the same separation:
 > score ASVspoof bona-fide audio re-encoded through our capture path — to separate
 > *channel* shift from *generator* shift. That experiment is the natural next step and
 > is not claimed here.
@@ -349,7 +364,7 @@ speaker-cosine in A.2 are authoritative. But two things already stand out:
 > **A2** clips, which are real speech from a 2025-era synthesizer. A1's detection rate
 > should not be read as evidence the detector generalizes.
 
-### A.2 Quality metrics *(done — jobs 523/524)*
+### A.2 Quality metrics *(done — job 540; supersedes 522 FAILED / 524 pre-correction)*
 
 Scored against the **4 held-out clips** (`metadata_eval.csv`), never against training
 audio. MCD / L2 / correlation use the **parallel** clips (same transcript as the real
@@ -395,7 +410,7 @@ The first implementation was worse still and was fixed during this pass — two 
 Sanity checks after the fixes: identical signals → **0.00**; a same-text synthesis
 (**25.78**) scores *below* a different-text real recording of the same speaker
 (**41.18**), i.e. the metric tracks content as MCD should. It remains noise-sensitive, which is the honest
-reason to lean on SSIM and speaker cosine as the primary evidence.
+reason to lean on the log-mel correlation and speaker cosine as the primary evidence.
 
 ### A.3 MOS — blind test built, **ratings pending** *(a suggested metric, not a required one)*
 
@@ -418,7 +433,12 @@ one.** Roughly 5–10 raters, ~15 minutes each.
 
 ### A.4 Analysis — what the creation half showed
 
-The predicted arc held, and the measurements pin down *why* rather than just *that*:
+The predicted *ordering* held (A1 ≪ A2), but the **prediction about A1 itself was wrong**
+and that is worth stating: the proposal expected A1 to be *"intelligible-ish but rough"* —
+a quality ceiling from data scarcity. What happened was categorically different. A1 never
+produced speech at all: zero duration variance, ZCR 0.241 vs 0.154 for speech, speaker
+cosine −0.020. The failure was total attention-alignment collapse, not a rough clone. The
+measurements pin down *why* rather than just *that*:
 
 - **A1 did not merely sound rough — it never learned the task.** Output duration is
   constant at the decoder step cap (std **0.00 s**) regardless of input length, and
@@ -440,7 +460,11 @@ tabular.
 
 ## Reproducibility
 - **Numbers/data:** `reports/detection/<run>/{result.json,history.csv,*_scores.npz}`.
-- **Figures:** `reports/figures/` — rebuild with
+- **Figures:** only the four cross-run figures (`det_eval_overlay`, `det_dev_overlay`,
+  `eer_tdcf_comparison`, `ssl_lr_sweep`) rebuild from the repo; the other 26 per-run
+  learning-curve/DET figures are emitted by the training jobs on the lab and fetched
+  with `scripts/fetch_results.sh` — they cannot be regenerated locally (they need
+  ASVspoof + the GPU). Rebuild the four with
   `uv run --no-project --with numpy --with matplotlib --with scipy python scripts/plot_detection.py`.
 - **Refresh from lab:** `bash scripts/fetch_results.sh` (then commit).
 - **Timeline/wall-times:** `docs/runtimes.md`.

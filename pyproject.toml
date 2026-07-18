@@ -9,11 +9,9 @@ requires-python = ">=3.11,<3.12"
 dependencies = [
     "numpy>=1.26",
     "scipy>=1.11",
-    "pandas>=2.1",
     "librosa>=0.10",       # mel/LFCC features, MCD, spectrograms
     "soundfile>=0.12",     # wav read/write
     "matplotlib>=3.8",     # learning curves, DET curves, spectrograms
-    "tqdm>=4.66",
 ]
 
 # Split by concern. On the GPU server these map to the two provided containers
@@ -40,6 +38,8 @@ ssl = [
     "transformers>=4.44",  # wav2vec2-XLS-R / WavLM frozen frontend
     "speechbrain>=1.0",    # ECAPA-TDNN speaker embeddings (cosine-sim metric)
 ]
+
+webui = ["flask>=3.0"]          # tools/webui local demo UI
 
 [dependency-groups]
 dev = [

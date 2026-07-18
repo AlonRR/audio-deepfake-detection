@@ -275,20 +275,28 @@ $("detBtn").onclick = async () => {
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || "failed");
     const ssl = j.ssl_bonafide_prob, cnn = j.cnn_bonafide_prob;
-    const real = ssl >= 0.5, col = real ? "var(--good)" : "var(--bad)";
+    // NO honest threshold exists for this model on out-of-domain audio. Measured on our
+    // own clips (reports/cross_ssl/cross_result.json): real speech scores 0.0009 and the
+    // XTTS fakes 0.137 - the fakes score HIGHER than genuine speech, so the ranking is
+    // inverted and no cut point separates them (cross EER 29.17%). Presenting a binary
+    // verdict here would be presenting a constant dressed as a prediction, so we show the
+    // score against both reference points and refuse to call it.
+    const REAL_REF = 0.0009, FAKE_REF = 0.137;
     $("verdict").innerHTML = `
-      <div class="big" style="color:${col}">${real ? "Likely REAL speech" : "Likely SYNTHETIC"}</div>
+      <div class="note" style="margin-top:0;margin-bottom:14px;border-left-color:var(--bad)">
+        <b>This detector cannot be trusted on this audio, and that is the finding.</b>
+        It scores 0.67% EER on ASVspoof but <b>29.17%</b> on our own recordings, where our
+        <b>genuine</b> speech averaged <b>${REAL_REF}</b> and the XTTS fakes <b>${FAKE_REF}</b> —
+        the fakes scored <i>higher</i> than real speech. The ranking is inverted, so no
+        threshold separates them. It learned ASVspoof's VCTK studio channel, not
+        authenticity. See <code>docs/results.md</code> &sect;B.5.
+      </div>
+      <div class="big" style="color:var(--warn)">Uncalibrated — no verdict given</div>
       <div style="font-size:13px;color:var(--dim);margin-bottom:6px">source: ${pending.label}</div>
       <div>SSL detector — P(bona fide) = <b>${ssl.toExponential(3)}</b></div>
-      <div class="bar"><i style="width:${(ssl*100).toFixed(1)}%;background:${col}"></i></div>
-      <div class="metric"><span>CNN-LFCC baseline</span><span>${cnn.toFixed(4)}</span></div>
-      <div class="note">
-        <b>Expect real speech to be called synthetic here.</b> This detector scores
-        0.67% EER on ASVspoof but scored our own <b>genuine</b> recordings at 0.0009 —
-        it was trained on VCTK studio audio and treats any unfamiliar microphone or room
-        as spoof. That failure is the project's main finding, not a UI bug.
-        See <code>docs/results.md</code> &sect;B.5.
-      </div>`;
+      <div class="metric"><span>our real speech averaged</span><span>${REAL_REF}</span></div>
+      <div class="metric"><span>our XTTS fakes averaged</span><span>${FAKE_REF}</span></div>
+      <div class="metric"><span>CNN-LFCC baseline (EER 70.8% on our clips — inverted, shown for contrast only)</span><span>${cnn.toFixed(4)}</span></div>`;
     $("verdict").classList.remove("hidden");
     $("detStatus").className = "status ok"; $("detStatus").textContent = `done (job ${j.job})`;
   } catch (e) {
