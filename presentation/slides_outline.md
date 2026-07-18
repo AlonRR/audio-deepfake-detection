@@ -123,15 +123,17 @@ so the trainer early-stopped at 9 — I did not pick a round number. Log-mel SSI
 0.154. Speaker cosine rose 0.430 → 0.449. Small but consistent in the same direction on
 metrics that don't share a failure mode.
 
-**Your MCD is ~52 — published MCD is 4–8 dB. Explain.** It is not comparable, and I say so
-in the report. Published MCD uses MGC-based cepstral analysis (SPTK, alpha warping); mine
-is a DCT of the log-mel spectrum, which lands about an order of magnitude higher. I use it
-to *rank* systems on parallel utterances, not to grade them. I also found and fixed two
-real bugs in it: `librosa.feature.mfcc` applies `power_to_db`, so the standard MCD constant
-was scaling a second time (giving 476–665), and silent frames dominated the mean because
-`log(~0)` swings wildly. After the fix, identical signals give exactly 0.00, and a
-same-text synthesis (51.9) scores below a *different-text real recording of the same
-speaker* (77.2) — so it tracks content, as MCD should.
+**Your MCD is ~25 — published MCD is 4–8 dB. Explain.** It is not comparable, and the
+report says so. Published MCD uses MGC-based cepstral analysis (SPTK, alpha warping); mine
+is a DCT of the log-mel spectrum, which lands several times higher. I use it to *rank*
+systems on parallel utterances, not to grade them. I also found and fixed **three** real
+bugs in it: (1) `librosa.feature.mfcc` applies `power_to_db`, so the MCD constant scaled a
+second time (giving 476–665); (2) silent frames dominated the mean because `log(~0)` swings
+wildly; (3) `melspectrogram` defaults to `power=2.0`, making `log(mel)` equal
+2·ln(amplitude) and inflating every value by exactly 2× (measured ratio 2.013) — the
+constant assumes log-*amplitude* cepstra. After all three: identical signals give **0.00**,
+a same-text synthesis scores **25.78**, and a *different-text real recording of the same
+speaker* scores **41.18** — so it tracks content, as MCD should.
 
 **Why is speaker cosine only 0.449 — didn't the clone work?** It worked partially, and
 overstating that would be dishonest. Real-vs-real is **0.848**; the clone reaches 0.449 —

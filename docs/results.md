@@ -387,10 +387,11 @@ The first implementation was worse still and was fixed during this pass — two 
 |---|---|---|
 | `librosa.feature.mfcc` applies `power_to_db` (10·log₁₀), but the MCD constant `10/ln10·√2` already assumes natural-log cepstra | scaling applied twice → MCD 476–665 | take natural log of the mel spectrum and DCT it directly |
 | Silence frames included | `log(~0)` is hugely negative and swings with any noise, so silent frames dominated the mean | drop frames > 35 dB below the utterance peak |
+| `melspectrogram` defaults to `power=2.0` | `log(mel)` is then `2·ln(amplitude)`, doubling every cepstral coefficient, while the MCD constant assumes log-**amplitude** — inflating MCD by exactly 2× (measured ratio 2.013) | `power=1.0` |
 
-Sanity checks after the fix: identical signals → **0.00**; a same-text synthesis (51.9)
-scores *below* a different-text real recording of the same speaker (77.2), i.e. the
-metric tracks content as MCD should. It remains noise-sensitive, which is the honest
+Sanity checks after the fixes: identical signals → **0.00**; a same-text synthesis
+(**25.78**) scores *below* a different-text real recording of the same speaker
+(**41.18**), i.e. the metric tracks content as MCD should. It remains noise-sensitive, which is the honest
 reason to lean on SSIM and speaker cosine as the primary evidence.
 
 ### A.3 MOS — blind test built, **ratings pending** *(a suggested metric, not a required one)*
