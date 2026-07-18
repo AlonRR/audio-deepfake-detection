@@ -8,9 +8,11 @@ exact commands. Paste the output back and I'll debug.
 > (`$LAB_HOST`, `$LAB_USER`) — this repo is public, and internal infrastructure names
 > do not belong in it. Substitute your own from the lab's connection instructions.
 
-> Status of the code: modules syntax-compile and the EER math is unit-tested, but the
-> TensorFlow training path has **not** run against real data/GPU yet — expect the first
-> run to surface a fix or two. That's the point of the smoke run in step 4.
+> Status: **everything below has been run end-to-end on the lab L4.** Wall-times are in
+> `docs/runtimes.md`; the environment problems hit along the way (QOS walltime, the
+> container's hidden pip constraint, missing torchaudio, the coqui-tts/transformers
+> incompatibility, LJSpeech column count, checkpoint OOM, disk quota) are written up in
+> `docs/results.md` §A.1b.
 
 ## 1. Connect
 1. Bring up the **WireGuard** tunnel (import your `<LAB_USER>.conf` profile, Activate).
@@ -104,6 +106,6 @@ python -m src.detection.cross_test --model reports/run1/model.keras --model-type
 For the SSL detector, first cache your clips' features with `features_ssl.py`, then
 `cross_test --model-type ssl --ssl-manifest ...`.
 
-> Reminder: the TF/torch training paths are unrun until this server session — the metrics
-> math is unit-tested, but expect to fix a config detail or two on first run (I'm on SSH
-> to debug). Keep failed runs — they're the "show the process" evidence.
+> The failed runs were kept deliberately — they are the "show the process" evidence the
+> brief rewards, and they are analysed in `docs/results.md` §A.1b (creation environment)
+> and §B.2 (the 4k-subset 0% EER trap).

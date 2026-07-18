@@ -1,7 +1,7 @@
 # Oral presentation — outline & examiner Q&A
 
-Structure per `skills/nn-final-project/SKILL.md` § 5. **Detection slides + answers are
-filled** (data in hand); **creation slides are scaffolded** (pending the voice recording).
+Structure per `skills/nn-final-project/SKILL.md` § 5. **All slides and examiner answers
+are filled** — both halves ran end-to-end. The only pending item is the MOS panel.
 Numbers: `docs/results.md`; figures: `reports/figures/`.
 
 ## Slide outline (problem → approach → results → demo → limitations)
@@ -29,16 +29,23 @@ Numbers: `docs/results.md`; figures: `reports/figures/`.
    **29.17%** EER, CNN 18.55% → **70.83%** (worse than chance). The decisive number:
    the SSL detector scores my **real** held-out speech at **0.0009** bona-fide. Channel
    shift, not generator novelty.
-9. **Demo** — play real vs cloned clips; live detector call on a held-out clip.
+9. **Demo** — `tools/webui` (run `tools/webui/run.cmd`): type text → cloned voice speaks
+   it → "Send to detector". **Record your own real voice live and let it be flagged
+   SYNTHETIC** — that is §B.5 demonstrating itself. Say it *before* it happens.
+   Fallback if the VPN fails: pre-generated clips in `data/generated/`.
 10. **Limitations & future work** — single speaker, one GPU / 2 h cap, frozen frontend;
     next: SSL fine-tune, AASIST graph back-end, In-the-Wild test.
-11. **Ethics** — defensive framing, own-voice-only (clean rights), misuse note.
+11. **Ethics** — defensive framing; **own voice only**, so no third-party consent issue;
+    the cloned audio and the source recording are deliberately kept out of the public
+    GitHub repo (private OneDrive backup instead); misuse note.
 
 ## Key figures
 - **Ready:** `eer_tdcf_comparison.png`, `det_eval_overlay.png`, `det_dev_overlay.png`,
   per-run learning curves, `base_cnn_lfcc_sub_*` (the 0% artifact).
-- **Pending creation:** XTTS fine-tune loss; A1-vs-A2 mel-spectrograms; attention
-  alignment; MCD/cosine/MOS bars; cross-test score-distribution plot.
+- **Numbers ready, plots optional:** XTTS loss curve (§A.1c table), MCD/SSIM/cosine
+  (§A.2 table), cross-test (§B.5 table). Worth plotting if time allows: A1-vs-A2
+  mel-spectrograms and the A1 attention-alignment map — they make the collapse visible.
+- **Not available:** MOS bars (panel not yet run).
 
 ## Examiner Q&A — draft answers
 
