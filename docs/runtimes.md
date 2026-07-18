@@ -35,7 +35,7 @@ are ~21 GB — deleted after scoring; train/dev caches deleted, re-extract if re
 | 261 | SSL eval extract (32 GB, resumed) | 71 237 | — | 31:44 | frozen XLS-R → (200,1024) f16 (deleted after scoring) |
 | 262 | **SSL eval score** | 71 237 | — | **4:35** | **Eval EER 0.668% · min t-DCF 0.0189** |
 | 263 | **CNN-LFCC eval score** | 71 237 | — | **9:34** | **Eval EER 18.55% · min t-DCF 0.3835** |
-| 264 | RawNet2 full (from scratch) | 25 380 / 24 844 | 25 (cap) | 1:37 (cancelled) | ❌ **collapsed** — val acc pinned at 0.897 (majority class), no convergence; documented failed baseline |
+| 264 | RawNet2 full (from scratch) | 25 380 / 24 844 | 25 (cap) | 1:37:00 (h:mm:ss — cancelled) | ❌ **collapsed** — val acc pinned at 0.897 (majority class), no convergence; documented failed baseline |
 | 265 | SSL XLS-R re-extract (train) | 25 380 | — | **12:44** | features re-extracted for the hp-search (freed earlier for quota) |
 | 266 | SSL XLS-R re-extract (dev) | 24 844 | — | **12:46** | `afterok:265` |
 | 267 | SSL hp-sweep (part 1) | 25 380 / 24 844 | 15–24/cfg (early-stop) | 2:00 (cap) | 4 LR cfgs done (lr1e4/3e4/1e3/3e3, ~21–32 min each — `data_ssl` re-reads features/epoch); TIMEOUT mid-lr1e2 |
@@ -77,6 +77,27 @@ core detection result and the "show the process" arc.
 ## How timings are recorded
 - **GPU jobs:** pull with `sacct -X -j <id> --format=JobName,Elapsed,State,Start,End`
   and append a row here.
-- **Long jobs** (e.g. XTTS fine-tune, > 2 h): checkpoint + chain across the 2 h QOS cap;
+- **Long jobs** (> 2 h): checkpoint + chain across the 2 h QOS cap. *In the event the XTTS fine-tune took 7 min and needed no chaining; the longest creation job was A1 at 1 h 07 m.*;
   log each segment separately.
 - **Data/transfer stages:** wrap with explicit start/end capture and record here.
+
+## Creation, cross-test & evaluation — GPU jobs (2026-07-18)
+
+`sacct -X` wall-times, same source as the detection table above.
+
+| Job | Name | Stage | Elapsed | Outcome |
+|---|---|---|---:|---|
+| 509 | `adf-xtts-ft` | A2 XTTS-v2 fine-tune (10 epochs, ~100 steps) | **7:11** | COMPLETED |
+| 511 | `adf-xtts-syn` | A2 synthesis, first attempt | 2:04 | **OUT_OF_MEMORY** — 5.6 GB trainer checkpoint |
+| 512 | `adf-a1-tts` | A1 Keras Tacotron2-lite, 300 epochs + synthesis | **1:07:19** | COMPLETED |
+| 513 | `adf-xtts-ft-syn` | A2 fine-tuned synthesis (checkpoint stripped to weights) | 1:01 | COMPLETED |
+| 515 | `adf-synth-par` | A2 parallel-text synthesis (held-out transcripts) | 1:21 | COMPLETED |
+| 516 | `adf-a1-par` | A1 parallel-text synthesis | 0:53 | COMPLETED |
+| 520 | `adf-cross` | Cross-generator test (SSL + CNN) | 1:00 | COMPLETED |
+| 522 | `adf-eval` | Evaluation harness, first attempt | 1:41 | **FAILED** — home quota full, pip could not write |
+| 524 | `adf-eval` | Evaluation harness | 0:14 | COMPLETED |
+| 540 | `adf-eval` | Evaluation re-run after the MCD/ceiling fixes | 0:14 | COMPLETED |
+
+**Note the fine-tune took 7 minutes, not hours.** 30 clips at batch 3 is ~10 steps/epoch,
+so the 2 h QOS cap was never in play for A2 — the checkpoint/resume chaining anticipated
+below was not needed. The long job was A1 (300 epochs over 30 clips), at 1 h 07 m.

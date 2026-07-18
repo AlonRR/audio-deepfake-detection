@@ -1,0 +1,330 @@
+{
+  "real_heldout": {
+    "n": 4,
+    "dur_mean": 8.14,
+    "dur_std": 2.3463,
+    "rms_mean": 0.05422,
+    "zcr_mean": 0.1537,
+    "peak_mean": 0.5314,
+    "n_near_silent": 0,
+    "n_clipping": 0,
+    "clips": [
+      {
+        "file": "clip_0004.wav",
+        "dur_s": 6.56,
+        "rms": 0.03911,
+        "peak": 0.2878,
+        "zcr": 0.1315
+      },
+      {
+        "file": "clip_0013.wav",
+        "dur_s": 7.36,
+        "rms": 0.05993,
+        "peak": 0.5605,
+        "zcr": 0.1724
+      },
+      {
+        "file": "clip_0019.wav",
+        "dur_s": 12.16,
+        "rms": 0.05239,
+        "peak": 0.5542,
+        "zcr": 0.1642
+      },
+      {
+        "file": "clip_0030.wav",
+        "dur_s": 6.48,
+        "rms": 0.06544,
+        "peak": 0.723,
+        "zcr": 0.1468
+      }
+    ]
+  },
+  "keras_tts": {
+    "n": 12,
+    "dur_mean": 9.276,
+    "dur_std": 0.0,
+    "rms_mean": 0.02672,
+    "zcr_mean": 0.2411,
+    "peak_mean": 0.4517,
+    "n_near_silent": 7,
+    "n_clipping": 5,
+    "clips": [
+      {
+        "file": "kerastts_00.wav",
+        "dur_s": 9.276,
+        "rms": 0.101,
+        "peak": 1.0,
+        "zcr": 0.2999
+      },
+      {
+        "file": "kerastts_01.wav",
+        "dur_s": 9.276,
+        "rms": 0.06207,
+        "peak": 1.0,
+        "zcr": 0.2503
+      },
+      {
+        "file": "kerastts_02.wav",
+        "dur_s": 9.276,
+        "rms": 0.03665,
+        "peak": 1.0,
+        "zcr": 0.2614
+      },
+      {
+        "file": "kerastts_03.wav",
+        "dur_s": 9.276,
+        "rms": 0.04433,
+        "peak": 1.0,
+        "zcr": 0.2458
+      },
+      {
+        "file": "kerastts_04.wav",
+        "dur_s": 9.276,
+        "rms": 0.00319,
+        "peak": 0.1295,
+        "zcr": 0.2033
+      },
+      {
+        "file": "kerastts_05.wav",
+        "dur_s": 9.276,
+        "rms": 0.00046,
+        "peak": 0.0066,
+        "zcr": 0.1969
+      },
+      {
+        "file": "kerastts_06.wav",
+        "dur_s": 9.276,
+        "rms": 0.0019,
+        "peak": 0.0683,
+        "zcr": 0.2599
+      },
+      {
+        "file": "kerastts_07.wav",
+        "dur_s": 9.276,
+        "rms": 0.00757,
+        "peak": 0.1268,
+        "zcr": 0.2775
+      },
+      {
+        "file": "kerastts_08.wav",
+        "dur_s": 9.276,
+        "rms": 0.00068,
+        "peak": 0.0097,
+        "zcr": 0.2296
+      },
+      {
+        "file": "kerastts_09.wav",
+        "dur_s": 9.276,
+        "rms": 0.00078,
+        "peak": 0.0257,
+        "zcr": 0.212
+      },
+      {
+        "file": "kerastts_10.wav",
+        "dur_s": 9.276,
+        "rms": 0.06083,
+        "peak": 1.0,
+        "zcr": 0.2075
+      },
+      {
+        "file": "kerastts_11.wav",
+        "dur_s": 9.276,
+        "rms": 0.00121,
+        "peak": 0.0534,
+        "zcr": 0.2496
+      }
+    ]
+  },
+  "xtts_zeroshot": {
+    "n": 12,
+    "dur_mean": 3.655,
+    "dur_std": 1.4274,
+    "rms_mean": 0.12587,
+    "zcr_mean": 0.0844,
+    "peak_mean": 1.0,
+    "n_near_silent": 0,
+    "n_clipping": 12,
+    "clips": [
+      {
+        "file": "xtts_00.wav",
+        "dur_s": 1.11,
+        "rms": 0.11971,
+        "peak": 0.9999,
+        "zcr": 0.0276
+      },
+      {
+        "file": "xtts_01.wav",
+        "dur_s": 1.846,
+        "rms": 0.11576,
+        "peak": 0.9999,
+        "zcr": 0.0407
+      },
+      {
+        "file": "xtts_02.wav",
+        "dur_s": 4.822,
+        "rms": 0.11759,
+        "peak": 1.0,
+        "zcr": 0.0903
+      },
+      {
+        "file": "xtts_03.wav",
+        "dur_s": 2.315,
+        "rms": 0.11643,
+        "peak": 1.0,
+        "zcr": 0.0911
+      },
+      {
+        "file": "xtts_04.wav",
+        "dur_s": 3.574,
+        "rms": 0.1239,
+        "peak": 0.9999,
+        "zcr": 0.094
+      },
+      {
+        "file": "xtts_05.wav",
+        "dur_s": 2.827,
+        "rms": 0.12694,
+        "peak": 0.9999,
+        "zcr": 0.058
+      },
+      {
+        "file": "xtts_06.wav",
+        "dur_s": 3.382,
+        "rms": 0.13278,
+        "peak": 1.0,
+        "zcr": 0.0836
+      },
+      {
+        "file": "xtts_07.wav",
+        "dur_s": 3.894,
+        "rms": 0.12565,
+        "peak": 1.0,
+        "zcr": 0.1319
+      },
+      {
+        "file": "xtts_08.wav",
+        "dur_s": 4.865,
+        "rms": 0.12414,
+        "peak": 1.0,
+        "zcr": 0.1327
+      },
+      {
+        "file": "xtts_09.wav",
+        "dur_s": 5.291,
+        "rms": 0.13634,
+        "peak": 0.9999,
+        "zcr": 0.0891
+      },
+      {
+        "file": "xtts_10.wav",
+        "dur_s": 3.713,
+        "rms": 0.13608,
+        "peak": 0.9999,
+        "zcr": 0.0819
+      },
+      {
+        "file": "xtts_11.wav",
+        "dur_s": 6.219,
+        "rms": 0.1351,
+        "peak": 1.0,
+        "zcr": 0.0921
+      }
+    ]
+  },
+  "xtts_ft": {
+    "n": 12,
+    "dur_mean": 4.553,
+    "dur_std": 1.1805,
+    "rms_mean": 0.0367,
+    "zcr_mean": 0.1499,
+    "peak_mean": 0.3682,
+    "n_near_silent": 0,
+    "n_clipping": 0,
+    "clips": [
+      {
+        "file": "xtts_00.wav",
+        "dur_s": 1.76,
+        "rms": 0.02271,
+        "peak": 0.2802,
+        "zcr": 0.1949
+      },
+      {
+        "file": "xtts_01.wav",
+        "dur_s": 3.477,
+        "rms": 0.02632,
+        "peak": 0.2699,
+        "zcr": 0.1207
+      },
+      {
+        "file": "xtts_02.wav",
+        "dur_s": 4.171,
+        "rms": 0.03728,
+        "peak": 0.3186,
+        "zcr": 0.1409
+      },
+      {
+        "file": "xtts_03.wav",
+        "dur_s": 3.435,
+        "rms": 0.03604,
+        "peak": 0.3503,
+        "zcr": 0.1667
+      },
+      {
+        "file": "xtts_04.wav",
+        "dur_s": 4.309,
+        "rms": 0.04772,
+        "peak": 0.4395,
+        "zcr": 0.1446
+      },
+      {
+        "file": "xtts_05.wav",
+        "dur_s": 4.544,
+        "rms": 0.0395,
+        "peak": 0.5231,
+        "zcr": 0.1461
+      },
+      {
+        "file": "xtts_06.wav",
+        "dur_s": 4.875,
+        "rms": 0.03304,
+        "peak": 0.3263,
+        "zcr": 0.1387
+      },
+      {
+        "file": "xtts_07.wav",
+        "dur_s": 5.237,
+        "rms": 0.02884,
+        "peak": 0.2509,
+        "zcr": 0.1799
+      },
+      {
+        "file": "xtts_08.wav",
+        "dur_s": 5.525,
+        "rms": 0.04447,
+        "peak": 0.3861,
+        "zcr": 0.1364
+      },
+      {
+        "file": "xtts_09.wav",
+        "dur_s": 6.123,
+        "rms": 0.03637,
+        "peak": 0.3457,
+        "zcr": 0.1445
+      },
+      {
+        "file": "xtts_10.wav",
+        "dur_s": 5.291,
+        "rms": 0.0522,
+        "peak": 0.5229,
+        "zcr": 0.1162
+      },
+      {
+        "file": "xtts_11.wav",
+        "dur_s": 5.888,
+        "rms": 0.03591,
+        "peak": 0.4048,
+        "zcr": 0.169
+      }
+    ]
+  }
+}

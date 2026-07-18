@@ -120,7 +120,7 @@ complexity", per the brief) → `data/generated/`.
 
 | Metric | How | Compares |
 |---|---|---|
-| **MOS** (naturalness, 1–5) | small human listening panel via a form; ≥10 raters where possible | real vs A1 vs A2 |
+| **MOS** (naturalness, 1–5) | small human listening panel via a form; 5–10 raters (revised down from an initial ≥ 10 target; see results.md A.3 — with 40 clips, 5 raters already give ~50 ratings per system) | real vs A1 vs A2 |
 | **Spectrogram similarity** | **MCD** (mel-cepstral distortion) + log-mel L2/correlation (`librosa`) | cloned vs real reference |
 | **Speaker-embedding cosine** | **ECAPA-TDNN** (SpeechBrain) embeddings, cosine similarity | cloned vs real speaker |
 
@@ -177,6 +177,11 @@ and measure the recovery.
   = log-mel / LFCC (baselines) and cached SSL embeddings (main). Licensing: ASVspoof is
   research-licensed; my voice is self-recorded.
 
+  *As delivered:* the recording is **48 kHz** 16-bit mono (browser capture, see
+  results.md A.1), i.e. above the stated 16–24 kHz range. It is resampled to 22.05 kHz
+  for the TTS dataset and 16 kHz for the detectors, so the spec deviation is harmless —
+  noted because it is a stated spec the delivered artifact does not match.
+
 ---
 
 ## Experiments & evaluation
@@ -226,7 +231,14 @@ the 3-week window.
 
 ## Timeline / milestones
 
-*(Project opens **Jul 5**, due **Jul 27 2026**; summary due **Jul 31**.)*
+*(Actual Moodle dates: **פרויקט גמר** opened Jul 5 2026, due **Jul 19 2026 01:37**;
+**סיכום פרויקט** opened Jul 18, due **Jul 25 2026 01:37**. An earlier draft of this
+section said "due Jul 27 / summary Jul 31" — that was wrong and is corrected here.)*
+
+> **As-planned vs as-built.** The week-by-week plan below is what was written at proposal
+> time. In the event both halves completed on **Jul 18**: detection ran Jul 1–2 (before
+> the assignment formally opened) and the whole creation half, cross-test and evaluation
+> ran in a single session on Jul 18. See `docs/runtimes.md` for the as-built wall-times.
 
 - **Week 1 (Jul 5–12):** VPN + JupyterHub first login (change the one-time password);
   confirm L4 + containers; check `/datasets` for ASVspoof; record 1–5 min; first-try CNN
