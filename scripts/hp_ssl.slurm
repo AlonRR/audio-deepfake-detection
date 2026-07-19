@@ -35,6 +35,11 @@ echo "$CONFIGS" | while read tag lr proj dropout; do
   [ -z "$tag" ] && continue
   OUT="reports/ssl_hp_$tag"
   if [ -f "$OUT/result.json" ]; then echo "skip $tag (already done)"; continue; fi
+  # A deliberate-failure config never writes result.json; its history.csv IS the
+  # deliverable. Skip it on resume so a re-run cannot overwrite the divergence evidence.
+  case "$tag" in *FAIL*)
+    if [ -f "$OUT/history.csv" ]; then echo "skip $tag (failure evidence captured)"; continue; fi;;
+  esac
   echo "===== HP $tag  lr=$lr proj=$proj dropout=$dropout ====="
   python3 -m src.detection.train_ssl --train "$TR" --dev "$DV" \
     --epochs 25 --batch-size 64 --lr "$lr" --proj "$proj" --dropout "$dropout" \
