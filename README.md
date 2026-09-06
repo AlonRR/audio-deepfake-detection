@@ -66,3 +66,7 @@ they stay local; only code, docs, notebooks, and small figures sync.
 Voice cloning is limited to the author's **own voice** (clean rights). This is a
 defensive-research project (detecting synthetic speech); see the ethics note in
 `docs/proposal.md`.
+
+---
+
+_Parts of this repository were drafted with the help of an LLM agent; reviewed and verified locally._
