@@ -1,4 +1,5 @@
 [project]
+license = "MIT"
 name = "audio-deepfake-detection"
 version = "0.1.0"
 description = "Audio deep fakes: voice-clone creation (Keras baseline + XTTS-v2) and SSL-frontend detection. Shenkar Neural Networks final project."
