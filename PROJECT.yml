@@ -1,0 +1,8 @@
+# The projects this repo holds. Schema: the tasks repo, SCHEMA.md
+projects:
+  - name:     Audio deepfake detection
+    kind:     build
+    state:    done
+    next:     "none - delivered and presented July 2026"
+    trackers: [README.md]
+    review:   2026-09-22
